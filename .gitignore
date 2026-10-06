@@ -1,6 +1,7 @@
 # Build output
 bin/
 obj/
+dist/
 
 # Game/BepInEx reference DLLs - copyrighted, not ours to version; see README
 # for how to regenerate libs/ from a local Valheim + BepInEx install.
