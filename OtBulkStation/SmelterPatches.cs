@@ -3,7 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
-namespace BulkStation
+namespace OtBulkStation
 {
     // Smelter covers the smelter, blast furnace, charcoal kiln, and eitr refinery - they all
     // share this one component, just with different conversions/capacities set on the prefab.

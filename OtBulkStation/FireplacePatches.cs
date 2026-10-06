@@ -3,7 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
-namespace BulkStation
+namespace OtBulkStation
 {
     // Fireplace covers every fuel-burning light source: campfire, hearth, bonfire, braziers,
     // sconces, and standing/wall torches - they all share this one component. Unlike Smelter

@@ -6,7 +6,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 
-namespace BulkStation
+namespace OtBulkStation
 {
     // Lets a modifier key speed up the input/output of refining stations (smelter, blast
     // furnace, charcoal kiln, cooking stations, stone oven) and fuel-burning light sources
@@ -18,8 +18,8 @@ namespace BulkStation
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string PluginGuid = "tlisonbee.valheim.bulkstation";
-        public const string PluginName = "BulkStation";
+        public const string PluginGuid = "tlisonbee.valheim.otbulkstation";
+        public const string PluginName = "OtBulkStation";
         public const string PluginVersion = "0.1.0";
 
         internal static ManualLogSource Log;

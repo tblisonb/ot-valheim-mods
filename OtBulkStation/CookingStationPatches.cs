@@ -3,7 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
-namespace BulkStation
+namespace OtBulkStation
 {
     // CookingStation covers the cooking station, iron cooking station, and stone oven. Food
     // items each occupy one discrete slot (m_slots) while they cook, so "batching" input means

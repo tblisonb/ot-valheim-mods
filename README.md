@@ -1,21 +1,21 @@
 # ValheimMods
 
-Two BepInEx plugins for Valheim - a "hello world" and a real gameplay mod -
-plus notes on how the pieces fit together.
+BepInEx plugins for Valheim, plus notes on how the pieces fit together.
 
 One repo for all mods here, rather than one repo per mod: they're small,
 share this one `libs/` reference folder and build setup, and splitting a
-mod out later (e.g. for its own Thunderstore release) is a trivial
-`git subtree split` away if one ever grows to need it.
+mod out later (e.g. for its own repo) is a `git subtree split` away if one
+ever needs it.
+
+Mods authored here are prefixed **`Ot`** (e.g. `OtBulkStation`) to make
+ownership obvious at a glance in mod lists/config folders full of other
+authors' plugins. Apply the same prefix to any new mod added to this repo.
 
 ## What's here
 
 ```
-HelloWorldMod/
-  HelloWorldMod.csproj      # SDK-style .NET project, targets netstandard2.1
-  Plugin.cs                 # the hello-world mod
-BulkStation/
-  BulkStation.csproj
+OtBulkStation/
+  OtBulkStation.csproj
   Plugin.cs                 # config + shared helpers
   SmelterPatches.cs          # batch ore/fuel input for smelter-type stations
   CookingStationPatches.cs   # batch food/fuel input + collect-all output for cooking stations
@@ -55,27 +55,15 @@ used instead - this just lets the compiler know the game's types exist.
 - For anything beyond small tweaks (adding items, recipes, prefabs, custom
   skills), the community library **Jötunn** builds on BepInEx + Harmony to
   give you proper APIs instead of reverse-engineering the game yourself.
-  Not needed for this hello-world, but worth knowing about next.
-
-## What `HelloWorldMod` does
-
-`Awake()` logs a line to the BepInEx console/log confirming the plugin
-loaded - the classic "hello world" signal. It originally also patched
-`Player.OnSpawned` to pop "Hello, Valheim!" on screen on spawn, as a visible
-proof it was working end-to-end; that patch has been removed now that
-`BulkStation` is the real mod in active use, but the log line and project
-stick around as the minimal reference example.
+  Not needed for anything here yet, but worth knowing about next.
 
 ## Building
 
-Both already built once in this session:
-
 ```
-cd HelloWorldMod && dotnet build -c Release
-cd ../BulkStation && dotnet build -c Release
+cd OtBulkStation && dotnet build -c Release
 ```
 
-Output: `<ProjectName>/bin/Release/netstandard2.1/<ProjectName>.dll`
+Output: `OtBulkStation/bin/Release/netstandard2.1/OtBulkStation.dll`
 
 (There's a harmless `MSB3277` warning about `System.Net.Http`/`System.IO.Compression`
 version conflicts between netstandard2.1 and the game's own assemblies -
@@ -92,8 +80,7 @@ DLLs go in:
 ```
 
 ```
-cp HelloWorldMod/bin/Release/netstandard2.1/HelloWorldMod.dll \
-   BulkStation/bin/Release/netstandard2.1/BulkStation.dll \
+cp OtBulkStation/bin/Release/netstandard2.1/OtBulkStation.dll \
    ~/.local/share/com.kesomannen.gale/valheim/profiles/Modding/BepInEx/plugins/
 ```
 
@@ -112,23 +99,10 @@ wherever that core DLL lives. So the log for a given run is always inside
 *that profile's own* `BepInEx/LogOutput.log`, never in the bare game folder
 (`.../Valheim/`) and never shared between profiles.
 
-The first test run's "Hello, Valheim!" worked correctly, and the game's own
-line *was* written to disk:
+## OtBulkStation
 
-```
-[Info   :   BepInEx] Loading [HelloWorldMod 0.1.0] (tlisonbee.valheim.helloworldmod)
-[Info   :HelloWorldMod] HelloWorldMod v0.1.0 loaded!
-```
-
-It just ended up in `OnePointOh/BepInEx/LogOutput.log`, since that's the
-profile that test was actually run on, before `Modding` was cloned off of
-it. Nothing to fix - just check `Modding/BepInEx/LogOutput.log` after a run
-on that profile from now on.
-
-## BulkStation
-
-Lets modifier keys speed up refining stations and fuel-burning light
-sources instead of pressing Use (E) over and over:
+Lets modifier keys speed up the input/output of refining stations and
+fuel-burning light sources instead of pressing Use (E) over and over:
 
 | Press                | Input (ore/wood/fuel/food slots)  | Output (cooking stations)    |
 |-----------------------|-------------------------------------|-------------------------------|
@@ -158,21 +132,21 @@ allowlist needed - every prefab built on any of these gets the behavior:
 Both modifier keys, the batch size, and per-station input-capacity
 overrides are configurable via the in-game BepInEx Configuration Manager
 (already installed in `Modding`) or by editing
-`BepInEx/config/tlisonbee.valheim.bulkstation.cfg` directly.
+`BepInEx/config/tlisonbee.valheim.otbulkstation.cfg` directly.
 
 **How it works, if you're following along in the code:** rather than
 reimplementing the game's item lookup/removal/messaging logic, each batching
 patch is a Harmony `Prefix` that re-invokes the *original* (unpatched)
 method N times via reflection - once per item - guarded by a `_busy` flag so
 those re-invocations don't recursively re-trigger the same prefix. This is
-the same technique used by `~/Downloads/SmelterUnlimited.cs`, the mod you'd
-already downloaded that inspired this one (it only covered smelter-type
-stations' ore/fuel input; BulkStation folds in cooking-station food/fuel
-input, fixed output collection, fireplace-type fuel input, and a
-config-driven per-prefab capacity override instead of one global cap).
+the same technique used by `~/Downloads/SmelterUnlimited.cs`, a mod that
+inspired this one (it only covered smelter-type stations' ore/fuel input;
+OtBulkStation folds in cooking-station food/fuel input, fixed output
+collection, fireplace-type fuel input, and a config-driven per-prefab
+capacity override instead of one global cap).
 
 Exact signatures and behavior (`Smelter.OnAddOre`, `CookingStation.OnInteract`,
-`Fireplace.Interact`, etc.) were confirmed against your installed game build
+`Fireplace.Interact`, etc.) were confirmed against the installed game build
 by decompiling `valheim_Data/Managed/assembly_valheim.dll` with `ilspycmd`
 (`dotnet tool install -g ilspycmd`) rather than guessed from memory, since
 the internal API shifts between game updates - e.g. that's how the
@@ -190,6 +164,29 @@ doesn't seem to apply - look at the station with Server Devcommands' `info`
 hover command (already installed in `Modding`) to see its exact prefab
 name, and adjust the config to match. A misspelled name just has no effect;
 it won't error.
+
+## Publishing to Hexium
+
+[Hexium](https://hexium.gg) accepts Thunderstore-compatible mod packages -
+no separate per-mod repo is required; `website_url` in the manifest can
+point anywhere, including a subfolder of this monorepo. A package is a zip
+containing, at the root:
+
+- `manifest.json` - `name` (letters/digits/underscores only, no spaces or
+  dashes), `description` (<=256 chars), `version_number` (`Major.Minor.Patch`),
+  `website_url`, `dependencies` (array, empty is fine; don't declare
+  BepInExPack_Valheim, it's assumed)
+- `icon.png` - exactly 256x256
+- `README.md` - the mod's page content (can differ from this repo's README)
+- `CHANGELOG.md` - optional
+- the built plugin DLL
+
+Max package size 512 MB. Uploading itself is via Hexium's web UI under your
+account's team (mods belong to a team, not a bare user) - there's no
+documented CLI/API for publishing a new mod version (the API token Hexium
+documents is for exporting Gale modpacks, a different feature). See
+[hexium.gg/packaging](https://hexium.gg/packaging) and
+[hexium.gg/faq](https://hexium.gg/faq) for specifics, since these may change.
 
 ## Where to go next
 
