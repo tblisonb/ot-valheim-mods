@@ -1,0 +1,13 @@
+# Build output
+bin/
+obj/
+
+# Game/BepInEx reference DLLs - copyrighted, not ours to version; see README
+# for how to regenerate libs/ from a local Valheim + BepInEx install.
+libs/
+
+# Editor/OS cruft
+.vs/
+.idea/
+*.user
+.DS_Store
