@@ -20,6 +20,10 @@ OtBulkStation/
   SmelterPatches.cs          # batch ore/fuel input for smelter-type stations
   CookingStationPatches.cs   # batch food/fuel input + collect-all output for cooking stations
   FireplacePatches.cs        # batch fuel input for campfires, hearths, bonfires, braziers, torches, ...
+OtExtensionReach/
+  OtExtensionReach.csproj
+  Plugin.cs                  # config
+  StationExtensionPatches.cs # relaxes crafting-station-upgrade placement restrictions
 libs/                        # reference-only DLLs (not redistributed, see below)
   BepInEx.dll                # from the installed BepInExPack
   0Harmony.dll                # Harmony, BepInEx's runtime-patching library
@@ -186,6 +190,39 @@ for each page, not guessed from display names - that wiki is the fastest
 way to look up anything not listed here (e.g. a prefab added in a later
 game update). Server Devcommands' `info` hover command (already installed
 in `Modding`) also works, in-game, against your exact installed version.
+
+## OtExtensionReach
+
+Relaxes where crafting-station upgrade pieces (`StationExtension` - forge
+bellows/cooling, workbench chopping block, cauldron spice rack, galdr table
+rune, black forge/artisan table upgrades, ...) can be placed, so an
+aesthetically-arranged station doesn't fight the vanilla layout rules.
+
+Vanilla blocks placing one of these upgrades unless it's within a few meters
+of its station (`$msg_extensionmissingstation`) and clear of other upgrades
+(`$msg_needspace`). Both checks run purely client-side, in
+`Player.UpdatePlacementGhost` - confirmed by decompiling `assembly_valheim.dll`
+with `ilspycmd` - and nothing server-side re-validates them, so this is a
+client-only gameplay tweak (same as `OtBulkStation`).
+
+Two configs, in `BepInEx/config/tlisonbee.valheim.otextensionreach.cfg`:
+
+- `MaxStationDistanceMultiplier` (default `1`, range `1`-`20`) - multiplies
+  `StationExtension.m_maxStationDistance`, the exact field vanilla uses both
+  to gate placement *and* to decide whether the upgrade counts toward the
+  station's level bonus (`CraftingStation.GetLevel`). Raising it extends both
+  together, so a far-flung upgrade still actually works instead of becoming
+  decorative - unlike just suppressing the placement error, which would let
+  you build somewhere the bonus silently never applies. Applies immediately,
+  including to upgrades already built (re-applied on every config change, no
+  relog needed).
+- `DisableSpaceRequirement` (default `false`) - lets upgrades be placed right
+  next to each other. Purely cosmetic UI gating; doesn't affect the bonus.
+
+**Multiplayer note:** since both checks (and the level-bonus calculation
+itself) run per-client, every player should run this mod for consistent
+crafting menus - a player without it won't see an upgrade built beyond
+vanilla range as counted toward the station's level.
 
 ## Publishing to Hexium
 
