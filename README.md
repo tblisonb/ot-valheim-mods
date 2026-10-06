@@ -156,14 +156,36 @@ only drains one slot per press, were actually confirmed rather than assumed.
 ### Capacity override prefab names
 
 `OreCapacityOverrides` and `FuelCapacityOverrides` key on the station's
-prefab name (e.g. `charcoal_kiln=100,smelter=40,blastfurnace=40`;
-`FuelCapacityOverrides` also applies to `Fireplace`-type stations, e.g.
-`campfire=50,hearth=100`). The names used in the config comments are the
-commonly-documented vanilla ones, but double-check in-game if an override
-doesn't seem to apply - look at the station with Server Devcommands' `info`
-hover command (already installed in `Modding`) to see its exact prefab
-name, and adjust the config to match. A misspelled name just has no effect;
-it won't error.
+*internal* prefab name, which usually isn't the same as its display name -
+e.g. the campfire's prefab name is `fire_pit`, not `campfire`. A misspelled
+or wrong name just has no effect (logged as a warning, see above); it won't
+error.
+
+| Station (display name)   | Prefab name                | Capacity setting    |
+|----------------------------|------------------------------|-----------------------|
+| Smelter                    | `smelter`                   | Ore + Fuel (coal)     |
+| Blast furnace               | `blastfurnace`               | Ore + Fuel (coal)     |
+| Charcoal kiln                | `charcoal_kiln`              | Ore only (no fuel slot) |
+| Eitr refinery                 | `eitrrefinery`                | Ore only (no fuel slot) |
+| Cooking station                | `piece_cookingstation`         | Fuel (wood) only - food input is slot-based, not capacity-overridden |
+| Iron cooking station             | `piece_cookingstation_iron`      | Fuel (wood) only |
+| Stone oven                        | `piece_oven`                      | Fuel (wood) only |
+| Campfire                             | `fire_pit`                          | Fuel (wood/resin) |
+| Hearth                                 | `hearth`                              | Fuel (wood/resin) |
+| Bonfire                                  | `bonfire`                                | Fuel (wood/resin) |
+| Standing brazier                           | `piece_brazierfloor01`                   | Fuel (wood/resin) |
+| Hanging brazier                              | `piece_brazierceiling01`                   | Fuel (wood/resin) |
+| Sconce                                         | `piece_walltorch`                            | Fuel (wood/resin) |
+| Standing wood torch                              | `piece_groundtorch_wood`                       | Fuel (wood/resin) |
+| Standing iron torch                                | `piece_groundtorch`                              | Fuel (wood/resin) |
+
+Example: `FuelCapacityOverrides = fire_pit=50,hearth=100,smelter=40`.
+
+These were confirmed against [the Valheim wiki's "Internal ID" field](https://valheim.weirdgloop.org/)
+for each page, not guessed from display names - that wiki is the fastest
+way to look up anything not listed here (e.g. a prefab added in a later
+game update). Server Devcommands' `info` hover command (already installed
+in `Modding`) also works, in-game, against your exact installed version.
 
 ## Publishing to Hexium
 

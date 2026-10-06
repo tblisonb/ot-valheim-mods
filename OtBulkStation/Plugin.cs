@@ -69,16 +69,22 @@ namespace OtBulkStation
                 "",
                 "Overrides a station's ore/wood input capacity. Comma-separated prefab_name=amount pairs, e.g. " +
                 "\"charcoal_kiln=100,smelter=40,blastfurnace=40\". Leave a station out to keep its vanilla " +
-                "capacity. If a name doesn't seem to take effect, double-check the exact prefab name in-game " +
-                "(e.g. with the 'info' hover command from Server Devcommands).");
+                "capacity. Applies to smelter-type stations only - prefab names: smelter, blastfurnace, " +
+                "charcoal_kiln, eitrrefinery. See README.md for the full prefab name reference.");
 
             FuelCapacityOverridesRaw = Config.Bind(
                 "Input Capacities",
                 "FuelCapacityOverrides",
                 "",
-                "Overrides a station's fuel capacity - coal for smelter-type stations and fuel-burning cooking " +
-                "stations, or wood/resin for campfires, hearths, bonfires, braziers, sconces, and torches. Same " +
-                "format as OreCapacityOverrides, e.g. \"campfire=50,hearth=100\".");
+                "Overrides a station's fuel capacity - coal for smelter-type stations, wood for cooking " +
+                "stations' fuel slot, or wood/resin for fire-type stations. Same format as " +
+                "OreCapacityOverrides, e.g. \"fire_pit=50,hearth=100\" (fire_pit is the campfire's prefab " +
+                "name, not \"campfire\"). Prefab names - smelter-type: smelter, blastfurnace (charcoal_kiln " +
+                "and eitrrefinery have no separate fuel). Cooking-type: piece_cookingstation, " +
+                "piece_cookingstation_iron, piece_oven. Fire-type: fire_pit (campfire), hearth, bonfire, " +
+                "piece_brazierfloor01 (standing brazier), piece_brazierceiling01 (hanging brazier), " +
+                "piece_walltorch (sconce), piece_groundtorch_wood (standing wood torch), piece_groundtorch " +
+                "(standing iron torch). See README.md for the full reference.");
 
             ReparseCapacities();
             OreCapacityOverridesRaw.SettingChanged += (_, _) => ReparseCapacities();
