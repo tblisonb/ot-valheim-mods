@@ -97,11 +97,11 @@ namespace OtBulkStation
 
         private static void ReparseCapacities()
         {
-            OreCapacityOverrides = ParseOverrides(OreCapacityOverridesRaw.Value);
-            FuelCapacityOverrides = ParseOverrides(FuelCapacityOverridesRaw.Value);
+            OreCapacityOverrides = ParseOverrides(OreCapacityOverridesRaw.Value, "OreCapacityOverrides");
+            FuelCapacityOverrides = ParseOverrides(FuelCapacityOverridesRaw.Value, "FuelCapacityOverrides");
         }
 
-        private static Dictionary<string, int> ParseOverrides(string raw)
+        private static Dictionary<string, int> ParseOverrides(string raw, string settingName)
         {
             var dict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrWhiteSpace(raw))
@@ -114,18 +114,25 @@ namespace OtBulkStation
                 var parts = entry.Split('=');
                 if (parts.Length != 2)
                 {
+                    Log?.LogWarning(
+                        $"{settingName}: ignoring \"{entry.Trim()}\" - expected prefab_name=amount, e.g. \"charcoal_kiln=200\".");
                     continue;
                 }
 
                 var name = parts[0].Trim();
                 if (name.Length == 0)
                 {
+                    Log?.LogWarning($"{settingName}: ignoring \"{entry.Trim()}\" - missing prefab name before '='.");
                     continue;
                 }
 
                 if (int.TryParse(parts[1].Trim(), out var value) && value > 0)
                 {
                     dict[name] = value;
+                }
+                else
+                {
+                    Log?.LogWarning($"{settingName}: ignoring \"{entry.Trim()}\" - \"{parts[1].Trim()}\" isn't a positive whole number.");
                 }
             }
 
