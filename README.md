@@ -20,16 +20,20 @@ OtBulkStation/
   SmelterPatches.cs          # batch ore/fuel input for smelter-type stations
   CookingStationPatches.cs   # batch food/fuel input + collect-all output for cooking stations
   FireplacePatches.cs        # batch fuel input for campfires, hearths, bonfires, braziers, torches, ...
+  package/                   # Thunderstore package sources (see "Publishing to Hexium")
 OtExtensionReach/
   OtExtensionReach.csproj
   Plugin.cs                  # config
   StationExtensionPatches.cs # relaxes crafting-station-upgrade placement restrictions
+  package/
 OtInventoryLayout/
   OtInventoryLayout.csproj
   Plugin.cs                   # config
   ContainerPanelPatches.cs    # hooks container-open; logs prefab/dims + optional UI-hierarchy dump
   ContainerReflowPatches.cs   # repacks a container's slots into a configured column count
   StackPlacementPatches.cs    # configurable first/last-empty-slot placement for Ctrl+click moves
+  package/
+package.py                   # builds each mod's Thunderstore zip from its package/ folder
 libs/                        # reference-only DLLs (not redistributed, see below)
   BepInEx.dll                # from the installed BepInExPack
   0Harmony.dll                # Harmony, BepInEx's runtime-patching library
@@ -396,6 +400,32 @@ containing, at the root:
 - `README.md` - the mod's page content (can differ from this repo's README)
 - `CHANGELOG.md` - optional
 - the built plugin DLL
+
+Everything except the DLL is tracked in each mod's `package/` folder, with
+one exception: `package/manifest.json` has no `version_number`. To build
+the zips:
+
+```
+./package.py                  # every mod
+./package.py OtInventoryLayout  # just the named mod(s)
+```
+
+For each mod this builds the Release DLL, stages `package/*` plus the DLL in
+`<Mod>/dist/pkg/`, and zips it to `<Mod>/dist/<Mod>-<version>.zip`
+(`dist/` is gitignored). The version comes from `PluginVersion` in
+`Plugin.cs` and is written into the staged `manifest.json`, so there's one
+place to bump it. The script refuses to package if `package/CHANGELOG.md`
+has no `## <version>` heading for that version, or if the manifest's name or
+description break Hexium's rules above.
+
+Package after committing the release: the compiler stamps the current git
+commit hash into the DLL (`AssemblyInformationalVersion`). That hash is the
+only difference between two builds of the same code.
+
+To release a new version: bump `PluginVersion`, add a `## <version>`
+section to `package/CHANGELOG.md`, commit, tag
+`<modname-lowercase>-v<version>` (e.g. `otinventorylayout-v1.0.0`), then
+run `./package.py <Mod>` and upload the zip.
 
 Max package size 512 MB. Uploading itself is via Hexium's web UI under your
 account's team (mods belong to a team, not a bare user) - there's no

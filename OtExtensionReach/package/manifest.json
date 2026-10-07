@@ -1,0 +1,6 @@
+{
+    "name": "OtExtensionReach",
+    "description": "Loosens vanilla's crafting-station-upgrade placement restrictions (distance from the station, spacing between upgrades) via config, without breaking the station's level bonus - build an aesthetically-arranged station instead of fighting the layout rules.",
+    "website_url": "https://github.com/tblisonb/ot-valheim-mods/tree/main/OtExtensionReach",
+    "dependencies": []
+}

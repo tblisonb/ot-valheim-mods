@@ -1,0 +1,6 @@
+{
+    "name": "OtBulkStation",
+    "description": "Hold a modifier with Use to batch-insert fuel/ore/food into refining stations and fires, and collect all finished cooking output at once instead of one item at a time.",
+    "website_url": "https://github.com/tblisonb/ot-valheim-mods/tree/main/OtBulkStation",
+    "dependencies": []
+}

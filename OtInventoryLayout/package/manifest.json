@@ -1,0 +1,6 @@
+{
+    "name": "OtInventoryLayout",
+    "description": "Repacks a container's inventory slots into a configurable column count (e.g. the Wardrobe's 5x10 into the chest's familiar 8-wide shape) so you can see it all without scrolling, plus a config for where Ctrl+click places a new stack.",
+    "website_url": "https://github.com/tblisonb/ot-valheim-mods/tree/main/OtInventoryLayout",
+    "dependencies": []
+}
