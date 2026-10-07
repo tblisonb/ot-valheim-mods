@@ -83,12 +83,11 @@ cosmetic, doesn't affect loading.)
 ## Trying it out
 
 The **Modding** Gale profile (`~/.local/share/com.kesomannen.gale/valheim/profiles/Modding`,
-cloned from `OnePointOh`) is the one to use for testing these mods. Built
-DLLs go in:
+cloned from `OnePointOh`) is the one to use for testing these mods. There
+are two stages:
 
-```
-~/.local/share/com.kesomannen.gale/valheim/profiles/Modding/BepInEx/plugins/
-```
+**While iterating**, copy the built DLL flat into the profile's plugins
+folder:
 
 ```
 cp OtBulkStation/bin/Release/netstandard2.1/OtBulkStation.dll \
@@ -97,6 +96,15 @@ cp OtBulkStation/bin/Release/netstandard2.1/OtBulkStation.dll \
 
 Then launch Valheim through Gale with the **Modding** profile selected. To
 iterate: edit the code, `dotnet build -c Release`, re-copy the DLL, relaunch.
+
+**Once it's ready to release**, build the Thunderstore-compatible zip (see
+"Publishing to Hexium" below), delete the flat-copied DLL from `plugins/`,
+and install the zip into **Modding** through Gale (Gale puts it in its own
+`plugins/OtMods-<Mod>/` folder). Don't leave both in place: BepInEx loads
+plugins recursively, so a flat copy plus a Gale-installed folder loads the
+same plugin twice. The same applies in reverse: if a Gale-installed version
+of a mod is already present when you start iterating on it again, disable
+or uninstall it in Gale before flat-copying a new build.
 
 **Don't copy test builds into any other profile** (especially `OnePointOh`) -
 `Modding` is the designated throwaway.
@@ -235,9 +243,9 @@ vanilla range as counted toward the station's level.
 
 Confirmed working in-game at `1.0.0`: the Wardrobe correctly reflows into
 6 full rows of 8 plus 2 leftover slots on a 7th row (the default
-`DisplayColumnOverrides` setting), buttons and backdrop art track the panel
-at any configured width, and Ctrl+click placement (see `StackPlacementMode`
-near the end of this section) lands where it visually should.
+`DisplayColumnOverrides` setting), buttons/backdrop art track the panel at
+any configured width, and Ctrl+click placement lands where expected under
+all three `StackPlacementMode` settings (see near the end of this section).
 
 Vanilla's container UI panel is sized to fit about 4 rows at its native
 column count (e.g. the blackmetal chest's 8x4 layout fits exactly). The 1.0
