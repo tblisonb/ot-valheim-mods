@@ -19,19 +19,26 @@ namespace OtInventoryLayout
         private static readonly FieldInfo ElementsField = AccessTools.Field(typeof(InventoryGrid), "m_elements");
         private static readonly FieldInfo CurrentContainerField = AccessTools.Field(typeof(InventoryGui), "m_currentContainer");
 
-        // Vanilla's shared container panel is sized to fit this many rows of its native column
-        // layout without scrolling (e.g. the blackmetal chest's 8x4 layout fits exactly) -
-        // confirmed from the panel's measured height via LogContainerUiHierarchy. Captured
-        // relative to this, rather than hardcoded in pixels, so it keeps working even if element
-        // spacing ever changes.
+        // Vanilla's shared container panel is sized to fit this many rows/columns of its native
+        // layout without scrolling (e.g. the blackmetal chest's 8x4 layout fits exactly, in both
+        // directions) - confirmed from the panel's measured size via LogContainerUiHierarchy.
+        // Captured relative to this, rather than hardcoded in pixels, so it keeps working even if
+        // element spacing ever changes.
+        private const float VanillaFitColumns = 8f;
         private const float VanillaFitRows = 4f;
 
         private static bool _baselineCaptured;
         private static float _baselineContainerWidth;
         private static float _baselineContainerHeight;
-        private static float _baselineSunkenHeight;
-        private static Vector2 _baselineSunkenAnchoredPos;
-        private static readonly HashSet<string> WidthWarnedPrefabs = new HashSet<string>();
+
+        // Every direct child of the panel that's anchored to its own center (rather than
+        // stretched or pinned to a corner) needs repositioning when the panel resizes, since its
+        // anchor point moves but its offset from that point doesn't. Covers the TakeAll/StackAll/
+        // SortAll buttons, the scrollbar track, and the "sunken" backdrop art - keyed generically
+        // by child name rather than listing each one, so a game update adding/renaming a button
+        // doesn't need a code change here.
+        private static readonly Dictionary<string, (Vector2 pos, Vector2 size)> BaselineCenterChildren =
+            new Dictionary<string, (Vector2 pos, Vector2 size)>();
 
         private static void Postfix(InventoryGrid __instance, Player player)
         {
@@ -72,7 +79,7 @@ namespace OtInventoryLayout
 
             var elements = (List<InventoryElement>)ElementsField.GetValue(__instance);
             RepositionElements(__instance, elements, displayWidth, displayHeight);
-            ResizePanel(gui, prefabName, displayWidth, displayHeight, __instance.m_elementSpace);
+            ResizePanel(gui, displayWidth, displayHeight, __instance.m_elementSpace);
         }
 
         private static void RepositionElements(InventoryGrid grid, List<InventoryElement> elements, int displayWidth, int displayHeight)
@@ -93,11 +100,16 @@ namespace OtInventoryLayout
             grid.m_gridRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, displayHeight * elementSpace);
         }
 
-        private static void ResizePanel(InventoryGui gui, string prefabName, int displayWidth, int displayHeight, float elementSpace)
+        private static bool IsCenterAnchored(RectTransform rt)
+        {
+            return Vector2.Distance(rt.anchorMin, new Vector2(0.5f, 0.5f)) < 0.01f
+                   && Vector2.Distance(rt.anchorMax, new Vector2(0.5f, 0.5f)) < 0.01f;
+        }
+
+        private static void ResizePanel(InventoryGui gui, int displayWidth, int displayHeight, float elementSpace)
         {
             var panel = gui.m_container;
-            var sunken = panel.Find("sunken") as RectTransform;
-            if (panel == null || sunken == null)
+            if (panel == null)
             {
                 return;
             }
@@ -106,29 +118,54 @@ namespace OtInventoryLayout
             {
                 _baselineContainerWidth = panel.rect.width;
                 _baselineContainerHeight = panel.rect.height;
-                _baselineSunkenHeight = sunken.rect.height;
-                _baselineSunkenAnchoredPos = sunken.anchoredPosition;
+                for (var i = 0; i < panel.childCount; i++)
+                {
+                    var child = panel.GetChild(i) as RectTransform;
+                    if (child != null && IsCenterAnchored(child))
+                    {
+                        BaselineCenterChildren[child.name] = (child.anchoredPosition, child.rect.size);
+                    }
+                }
+
                 _baselineCaptured = true;
             }
 
-            if (displayWidth * elementSpace > _baselineContainerWidth && WidthWarnedPrefabs.Add(prefabName))
-            {
-                Plugin.Log.LogWarning(
-                    $"DisplayColumnOverrides: {prefabName}'s configured width ({displayWidth} columns) is wider than " +
-                    "the container panel - slots past the right edge will render outside the visible panel. This " +
-                    "mod only grows the panel's height, not its width.");
-            }
-
+            var widthPadding = _baselineContainerWidth - VanillaFitColumns * elementSpace;
             var heightPadding = _baselineContainerHeight - VanillaFitRows * elementSpace;
 
+            var targetContainerWidth = Mathf.Max(_baselineContainerWidth, displayWidth * elementSpace + widthPadding);
             var targetContainerHeight = Mathf.Max(_baselineContainerHeight, displayHeight * elementSpace + heightPadding);
+            var widthDelta = targetContainerWidth - _baselineContainerWidth;
             var heightDelta = targetContainerHeight - _baselineContainerHeight;
 
+            panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, targetContainerWidth);
             panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, targetContainerHeight);
 
-            var targetSunkenHeight = _baselineSunkenHeight + heightDelta;
-            sunken.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, targetSunkenHeight);
-            sunken.anchoredPosition = _baselineSunkenAnchoredPos + new Vector2(0f, -heightDelta / 2f);
+            // Container's pivot is (0,1) - left edge fixed growing rightward (X), top edge fixed
+            // growing downward (Y). A center-anchored child's distance from the fixed left edge
+            // only stays constant if its X offset shrinks by half the width growth, while its
+            // distance from the fixed top edge only stays constant if its Y offset *grows* by
+            // half the height growth - the signs differ because the fixed edge sits at the
+            // pivot's "min" side on X but its "max" side on Y. Worked out by hand from Unity's
+            // RectTransform.rect formula (rect = (-size*pivot, size)); confirm against
+            // LogContainerUiHierarchy if this ever looks off again.
+            var correction = new Vector2(-widthDelta / 2f, heightDelta / 2f);
+            for (var i = 0; i < panel.childCount; i++)
+            {
+                var child = panel.GetChild(i) as RectTransform;
+                if (child == null || !BaselineCenterChildren.TryGetValue(child.name, out var baseline))
+                {
+                    continue;
+                }
+
+                if (child.name == "sunken")
+                {
+                    child.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, baseline.size.x + widthDelta);
+                    child.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, baseline.size.y + heightDelta);
+                }
+
+                child.anchoredPosition = baseline.pos + correction;
+            }
         }
     }
 }

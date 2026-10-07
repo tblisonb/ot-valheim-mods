@@ -232,12 +232,12 @@ vanilla range as counted toward the station's level.
 
 ## OtInventoryLayout
 
-**Work in progress.** The panel-resize mechanism (growing the panel/backdrop
-art to fit extra display rows) is confirmed working in-game - tested with no
-override configured, the Wardrobe correctly rendered its full 5x10 grid with
-no scrollbar. The actual column-reflow (packing it into 8 columns instead)
-hasn't been visually confirmed yet - the prefab-name bug described below
-meant no override had ever actually applied until it was found and fixed.
+**Work in progress**, but the core feature is confirmed working in-game:
+the Wardrobe correctly reflows into 6 full rows of 8 plus 2 leftover slots
+on a 7th row (the default `DisplayColumnOverrides` setting), once the
+prefab-name bug described below was found and fixed. Also confirmed: setting
+the column count past 8 (e.g. `10`) correctly grows the panel *wider*, not
+just taller.
 
 Vanilla's container UI panel is sized to fit about 4 rows at its native
 column count (e.g. the blackmetal chest's 8x4 layout fits exactly). The 1.0
@@ -255,7 +255,7 @@ packed 8-wide (the same width as the blackmetal chest, which already fits
 the panel with no changes needed), become 6 full rows plus 2 leftover slots
 on a 7th row, via `DisplayColumnOverrides` in
 `BepInEx/config/tlisonbee.valheim.otinventorylayout.cfg` (comma-separated
-`prefab_name=columns`, e.g. `piece_chestwarderobe=8`). Only each slot's
+`prefab_name=columns`, e.g. `piece_chest_warderobe=8`). Only each slot's
 *on-screen position* is remapped (linear index order preserved, just
 re-wrapped at a different column count) - the container's actual
 `Inventory` width/height, and every click/drag/hover lookup that's keyed on
@@ -267,23 +267,37 @@ Implementation: a Harmony `Postfix` on `InventoryGrid.UpdateGui` (scoped to
 only the container grid, never the player's own) runs after vanilla finishes
 building/positioning `InventoryElement`s at their real grid coordinates, and
 just overwrites each element's `anchoredPosition` to its remapped display
-coordinate. The panel background (`InventoryGui.m_container`) and its inset
-backdrop art (`sunken`, a child found by name) grow in height to fit the
-extra display rows, relative to a baseline size captured from the panel's
-first-ever open this session (needed so the panel correctly *shrinks back*
-when a later-opened container isn't configured, rather than staying stretched
-from whatever was opened before it). Confirmed via `LogContainerUiHierarchy`
-(see below) that `sunken` and the panel border art are all 9-sliced Unity UI
-sprites, which resize cleanly without distortion.
+coordinate. The panel background (`InventoryGui.m_container`) grows in both
+axes to fit the extra display rows/columns, relative to a baseline size
+captured from the panel's first-ever open this session (needed so the panel
+correctly *shrinks back* when a later-opened container isn't configured,
+rather than staying stretched from whatever was opened before it).
 
-Known gaps: only panel *height* grows to fit extra rows - if a configured
-column count is wide enough to need more panel *width* too, slots past the
-right edge render outside the visible panel (logged as a one-time warning
-per prefab). Gamepad d-pad/stick navigation isn't remapped, so it still
+Growing the panel isn't enough on its own, though - every other direct
+child of the panel that's anchored to its own center rather than stretched
+or pinned to a corner (the `TakeAll`/`StackAll`/`SortAll` buttons, the
+scrollbar track, and the `sunken` inset backdrop art) has its position
+*frozen* at a fixed pixel offset from that center anchor, which Unity
+doesn't auto-adjust when the parent resizes - without correcting for that,
+those elements visibly drift out of place as the panel grows (this is
+exactly the misaligned-buttons symptom from testing). The fix re-centers
+each one using the signed difference between the panel's fixed edge (left
+for X, top for Y - Container's pivot is `(0,1)`) and its growing edge,
+worked out by hand from Unity's `RectTransform.rect` formula; `sunken`
+additionally grows in size, matching the panel, since (confirmed via
+`LogContainerUiHierarchy`, see below) it and the panel border art are all
+9-sliced Unity UI sprites that resize cleanly without distortion, while the
+buttons/scrollbar only need repositioning, not resizing.
+
+Known gaps: gamepad d-pad/stick navigation isn't remapped, so it still
 steps through slots in native column order rather than the reflowed one -
 not an issue for mouse play, but worth knowing. The player's own inventory
 panel (`InventoryGui.m_player`) isn't wired up at all, per the original
-scoping decision to leave it out for now.
+scoping decision to leave it out for now. A configured column/row count
+large enough to run the panel off the edge of the screen (or into the
+player's own inventory panel) isn't clamped or warned about - this mod
+trusts the configured value the same way `OtBulkStation`'s capacity
+overrides do.
 
 A `LogContainerUiHierarchy` debug config (off by default) dumps the full
 RectTransform/component tree under the container panel to the log every
