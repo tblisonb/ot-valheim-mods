@@ -7,6 +7,21 @@ using HarmonyLib;
 
 namespace OtInventoryLayout
 {
+    // Vanilla decides which empty slot a stack-moved item (Ctrl+click, or a world pickup once no
+    // existing stack has room) lands in via Inventory.FindEmptySlot(topFirst) - topFirst is true
+    // for weapons/tools/shields/utility/misc/trinkets (first empty slot, scanning rows top to
+    // bottom) and false for everything else (first empty slot of the *last* row, still scanning
+    // that row left to right - not simply "last slot overall"). Both rules scan in the exact same
+    // linear slot order DisplayColumnOverrides reflows by, so "first empty slot" already lands in
+    // the visually-first reflowed slot - but the "last row, left-to-right" rule doesn't land in
+    // the visually-last reflowed slot, which is what prompted this.
+    public enum StackPlacementMode
+    {
+        Vanilla,
+        FirstEmptySlot,
+        LastEmptySlot
+    }
+
     // Vanilla's container UI panel is sized to fit about 4 rows at its native column count (e.g.
     // the blackmetal chest's 8x4 layout fits exactly). Containers with more rows than that - the
     // 1.0 Wardrobe is 5x10 - need scrolling to see everything. Rather than just growing the panel
@@ -22,11 +37,12 @@ namespace OtInventoryLayout
     {
         public const string PluginGuid = "tlisonbee.valheim.otinventorylayout";
         public const string PluginName = "OtInventoryLayout";
-        public const string PluginVersion = "0.1.0";
+        public const string PluginVersion = "1.0.0";
 
         internal static ManualLogSource Log;
 
         internal static ConfigEntry<string> DisplayColumnOverridesRaw;
+        internal static ConfigEntry<StackPlacementMode> StackPlacementModeConfig;
         internal static ConfigEntry<bool> LogContainerUiHierarchy;
 
         internal static Dictionary<string, int> DisplayColumnOverrides = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -49,6 +65,19 @@ namespace OtInventoryLayout
                 "own typo - it's \"warderobe\", not \"wardrobe\") - native layout 5 columns x 10 rows " +
                 "(50 slots), repacked at 8 columns into 6 full rows plus 2 slots on a 7th row, the " +
                 "same width as the blackmetal chest (piece_chest_blackmetal).");
+
+            StackPlacementModeConfig = Config.Bind(
+                "General",
+                "StackPlacementMode",
+                StackPlacementMode.Vanilla,
+                "Which empty slot a Ctrl+click (or world pickup, if no existing stack has room) " +
+                "places an item into. An existing partial stack of the same item is always topped " +
+                "up first, regardless of this setting - it only decides where a *new* stack goes. " +
+                "Vanilla: unchanged game behavior (depends on item type - see README). " +
+                "FirstEmptySlot: always the first empty slot, in reading order (left to right, top " +
+                "to bottom) - for a DisplayColumnOverrides container, that's reading order of the " +
+                "*reflowed* display grid, not the native one. LastEmptySlot: always the last empty " +
+                "slot by that same order. Applies to every inventory, not just reflowed containers.");
 
             LogContainerUiHierarchy = Config.Bind(
                 "Debug",

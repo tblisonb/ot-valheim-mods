@@ -29,6 +29,7 @@ OtInventoryLayout/
   Plugin.cs                   # config
   ContainerPanelPatches.cs    # hooks container-open; logs prefab/dims + optional UI-hierarchy dump
   ContainerReflowPatches.cs   # repacks a container's slots into a configured column count
+  StackPlacementPatches.cs    # configurable first/last-empty-slot placement for Ctrl+click moves
 libs/                        # reference-only DLLs (not redistributed, see below)
   BepInEx.dll                # from the installed BepInExPack
   0Harmony.dll                # Harmony, BepInEx's runtime-patching library
@@ -232,12 +233,11 @@ vanilla range as counted toward the station's level.
 
 ## OtInventoryLayout
 
-**Work in progress**, but the core feature is confirmed working in-game:
-the Wardrobe correctly reflows into 6 full rows of 8 plus 2 leftover slots
-on a 7th row (the default `DisplayColumnOverrides` setting), once the
-prefab-name bug described below was found and fixed. Also confirmed: setting
-the column count past 8 (e.g. `10`) correctly grows the panel *wider*, not
-just taller.
+Confirmed working in-game at `1.0.0`: the Wardrobe correctly reflows into
+6 full rows of 8 plus 2 leftover slots on a 7th row (the default
+`DisplayColumnOverrides` setting), buttons and backdrop art track the panel
+at any configured width, and Ctrl+click placement (see `StackPlacementMode`
+near the end of this section) lands where it visually should.
 
 Vanilla's container UI panel is sized to fit about 4 rows at its native
 column count (e.g. the blackmetal chest's 8x4 layout fits exactly). The 1.0
@@ -330,6 +330,48 @@ the literal `GameObject` name exactly.
 
 Built to extend to other containers later just by adding more
 `prefab_name=columns` entries - no code changes needed for a new prefab.
+
+### StackPlacementMode
+
+Ctrl+click moves an item to the other inventory (player <-> container)
+without picking a slot by hand - vanilla decides the slot for you via
+`Inventory.FindEmptySlot(topFirst)`: `topFirst` is `true` for weapons,
+tools, shields, utility items, and trinkets (first empty slot, scanning
+rows top to bottom, left to right), and `false` for everything else (first
+empty slot of the *last* row - still left to right within that row, not
+simply "the last slot overall"). An existing partial stack of the same
+item is always topped up first, before either rule is even consulted -
+that part needed no changes.
+
+Both rules scan slots in the exact same linear order (row by row, by real
+grid coordinate) that `DisplayColumnOverrides` reflows a container's
+display grid in - which is what makes the `topFirst=true` case already
+land in the visually-first reflowed slot with no fix needed. The
+`topFirst=false` case doesn't fare as well: "first empty slot of the last
+*real* row" can land anywhere once that row's been re-wrapped into the
+middle of a wider display grid - reported from testing as a stack landing
+in the Wardrobe's display row 5 instead of the start of a row, as expected.
+
+`StackPlacementMode` (`General` section, default `Vanilla`) replaces that
+per-item-type rule outright:
+
+- **`Vanilla`** - unchanged, including the quirk above.
+- **`FirstEmptySlot`** - always the first empty slot in that same linear
+  order, regardless of item type.
+- **`LastEmptySlot`** - always the *last* empty slot in that order (unlike
+  vanilla's `topFirst=false`, which only ever means "last row").
+
+Implementation is a Harmony `Prefix` on `Inventory.FindEmptySlot` that,
+when not `Vanilla`, replaces the scan outright rather than touching
+`topFirst`'s logic - and needs no awareness of `DisplayColumnOverrides` or
+reflowed display coordinates at all, since reflowing preserves linear slot
+order by construction (it only changes how that order wraps into
+rows/columns - see the `ContainerReflowPatches.cs` section above). Applies
+to every `Inventory`, not just configured containers - including the
+player's own inventory and bag-of-holding-style mods, since vanilla's rule
+lives on the base `Inventory` class, not anything container-specific. If
+that scope turns out to be too broad in practice (e.g. you only want this
+for reflowed containers), it's a one-line narrowing, not a rewrite - say so.
 
 ## Publishing to Hexium
 
