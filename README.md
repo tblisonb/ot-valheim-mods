@@ -24,6 +24,11 @@ OtExtensionReach/
   OtExtensionReach.csproj
   Plugin.cs                  # config
   StationExtensionPatches.cs # relaxes crafting-station-upgrade placement restrictions
+OtInventoryLayout/
+  OtInventoryLayout.csproj
+  Plugin.cs                   # config
+  ContainerPanelPatches.cs    # hooks container-open; optional UI-hierarchy debug dump
+  ContainerPanelResizer.cs    # grows a container's panel to show more rows at once
 libs/                        # reference-only DLLs (not redistributed, see below)
   BepInEx.dll                # from the installed BepInExPack
   0Harmony.dll                # Harmony, BepInEx's runtime-patching library
@@ -32,6 +37,7 @@ libs/                        # reference-only DLLs (not redistributed, see below
   assembly_guiutils.dll       # Localization
   UnityEngine.dll
   UnityEngine.CoreModule.dll
+  UnityEngine.UI.dll          # ScrollRect, Mask, Image, etc.
 ```
 
 `libs/` only holds *reference assemblies* used at compile time (`<Private>false</Private>`
@@ -223,6 +229,43 @@ Two configs, in `BepInEx/config/tlisonbee.valheim.otextensionreach.cfg`:
 itself) run per-client, every player should run this mod for consistent
 crafting menus - a player without it won't see an upgrade built beyond
 vanilla range as counted toward the station's level.
+
+## OtInventoryLayout
+
+**Work in progress** - not yet confirmed working in-game.
+
+Vanilla's container UI clips to a fixed-height viewport sized for a 4-row
+inventory (e.g. the blackmetal chest's 8x4 layout fits exactly). Containers
+with more rows need to be scrolled to see everything - the 1.0 Wardrobe
+(`piece_wardrobe`) is 5 columns x 10 rows, so more than half of it is hidden
+below the fold every time it's opened. This mod grows the container panel
+per-prefab so more (or all) of its rows are visible without scrolling, via
+`VisibleRowOverrides` in `BepInEx/config/tlisonbee.valheim.otinventorylayout.cfg`
+(comma-separated `prefab_name=rows`, e.g. `piece_wardrobe=10`). Deliberately
+scoped to *only* the UI panel size - it never touches the container's actual
+width/height (`Inventory.GetWidth/GetHeight`), so save data and item grid
+positions are untouched and there's no multiplayer desync risk the way
+changing real inventory dimensions would have.
+
+The resize patch hooks `InventoryGui.Show(Container, int)` (fires once per
+container open) and, for a configured prefab, walks up from the container's
+`InventoryGrid` to find its enclosing `ScrollRect` and grows its `viewport`
+(plus the panel `InventoryGui.m_container`) to fit the configured row count.
+This assumes the standard Unity ScrollRect/Viewport/Content pattern, which
+hasn't been confirmed against the actual Wardrobe prefab hierarchy yet - only
+decompiled C# (`InventoryGui`/`InventoryGrid`/`Container`) was available
+in-session, and prefab wiring (exact child names, anchors, background art)
+lives in Unity's binary asset files, not the assembly.
+
+A `LogContainerUiHierarchy` debug config (off by default) dumps the full
+RectTransform/component tree under the container panel to the log every
+time a container opens - the fallback for getting real hierarchy data to fix
+up the resize logic once it's been tried against the actual game.
+
+Built to extend to other containers/player inventory later just by adding
+more `prefab_name=rows` entries - no code changes needed for a new prefab,
+only the player's own inventory (a different UI panel, `InventoryGui.m_player`)
+isn't wired up yet.
 
 ## Publishing to Hexium
 
