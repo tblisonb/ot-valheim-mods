@@ -27,8 +27,8 @@ OtExtensionReach/
 OtInventoryLayout/
   OtInventoryLayout.csproj
   Plugin.cs                   # config
-  ContainerPanelPatches.cs    # hooks container-open; optional UI-hierarchy debug dump
-  ContainerPanelResizer.cs    # grows a container's panel to show more rows at once
+  ContainerPanelPatches.cs    # hooks container-open; logs prefab/dims + optional UI-hierarchy dump
+  ContainerReflowPatches.cs   # repacks a container's slots into a configured column count
 libs/                        # reference-only DLLs (not redistributed, see below)
   BepInEx.dll                # from the installed BepInExPack
   0Harmony.dll                # Harmony, BepInEx's runtime-patching library
@@ -234,38 +234,62 @@ vanilla range as counted toward the station's level.
 
 **Work in progress** - not yet confirmed working in-game.
 
-Vanilla's container UI clips to a fixed-height viewport sized for a 4-row
-inventory (e.g. the blackmetal chest's 8x4 layout fits exactly). Containers
-with more rows need to be scrolled to see everything - the 1.0 Wardrobe
-(`piece_wardrobe`) is 5 columns x 10 rows, so more than half of it is hidden
-below the fold every time it's opened. This mod grows the container panel
-per-prefab so more (or all) of its rows are visible without scrolling, via
-`VisibleRowOverrides` in `BepInEx/config/tlisonbee.valheim.otinventorylayout.cfg`
-(comma-separated `prefab_name=rows`, e.g. `piece_wardrobe=10`). Deliberately
-scoped to *only* the UI panel size - it never touches the container's actual
-width/height (`Inventory.GetWidth/GetHeight`), so save data and item grid
-positions are untouched and there's no multiplayer desync risk the way
+Vanilla's container UI panel is sized to fit about 4 rows at its native
+column count (e.g. the blackmetal chest's 8x4 layout fits exactly). The 1.0
+Wardrobe (`piece_chestwarderobe` - note the game's own typo, "warderobe" not
+"wardrobe") is 5 columns x 10 rows, so more than half of it is hidden below
+the fold every time it's opened.
+
+The first version of this mod just grew the panel taller to show every real
+row. Dropped that approach: a 10-row-tall panel doesn't actually fit on
+screen next to the player's own inventory once that's expanded past vanilla's
+base 8x4 (up to 8x6 as of 1.0, more with inventory-expansion mods). Instead,
+this **reflows** a configured container's slots into a more compact display
+shape instead of growing to fit its native one - the Wardrobe's 50 slots,
+packed 8-wide (the same width as the blackmetal chest, which already fits
+the panel with no changes needed), become 6 full rows plus 2 leftover slots
+on a 7th row, via `DisplayColumnOverrides` in
+`BepInEx/config/tlisonbee.valheim.otinventorylayout.cfg` (comma-separated
+`prefab_name=columns`, e.g. `piece_chestwarderobe=8`). Only each slot's
+*on-screen position* is remapped (linear index order preserved, just
+re-wrapped at a different column count) - the container's actual
+`Inventory` width/height, and every click/drag/hover lookup that's keyed on
+real grid coordinates, are completely untouched, so save data and item grid
+positions carry no risk, and there's no multiplayer desync risk the way
 changing real inventory dimensions would have.
 
-The resize patch hooks `InventoryGui.Show(Container, int)` (fires once per
-container open) and, for a configured prefab, walks up from the container's
-`InventoryGrid` to find its enclosing `ScrollRect` and grows its `viewport`
-(plus the panel `InventoryGui.m_container`) to fit the configured row count.
-This assumes the standard Unity ScrollRect/Viewport/Content pattern, which
-hasn't been confirmed against the actual Wardrobe prefab hierarchy yet - only
-decompiled C# (`InventoryGui`/`InventoryGrid`/`Container`) was available
-in-session, and prefab wiring (exact child names, anchors, background art)
-lives in Unity's binary asset files, not the assembly.
+Implementation: a Harmony `Postfix` on `InventoryGrid.UpdateGui` (scoped to
+only the container grid, never the player's own) runs after vanilla finishes
+building/positioning `InventoryElement`s at their real grid coordinates, and
+just overwrites each element's `anchoredPosition` to its remapped display
+coordinate. The panel background (`InventoryGui.m_container`) and its inset
+backdrop art (`sunken`, a child found by name) grow in height to fit the
+extra display rows, relative to a baseline size captured from the panel's
+first-ever open this session (needed so the panel correctly *shrinks back*
+when a later-opened container isn't configured, rather than staying stretched
+from whatever was opened before it). Confirmed via `LogContainerUiHierarchy`
+(see below) that `sunken` and the panel border art are all 9-sliced Unity UI
+sprites, which resize cleanly without distortion.
+
+Known gaps: only panel *height* grows to fit extra rows - if a configured
+column count is wide enough to need more panel *width* too, slots past the
+right edge render outside the visible panel (logged as a one-time warning
+per prefab). Gamepad d-pad/stick navigation isn't remapped, so it still
+steps through slots in native column order rather than the reflowed one -
+not an issue for mouse play, but worth knowing. The player's own inventory
+panel (`InventoryGui.m_player`) isn't wired up at all, per the original
+scoping decision to leave it out for now.
 
 A `LogContainerUiHierarchy` debug config (off by default) dumps the full
 RectTransform/component tree under the container panel to the log every
-time a container opens - the fallback for getting real hierarchy data to fix
-up the resize logic once it's been tried against the actual game.
+time a container opens - how the real panel structure (not just the
+decompiled C#, which doesn't show Unity prefab wiring like child names,
+anchors, or background art) was confirmed, and the only lead that caught the
+`piece_wardrobe` vs. actual `piece_chestwarderobe` prefab-name mismatch that
+silently no-op'd the first version of this mod.
 
-Built to extend to other containers/player inventory later just by adding
-more `prefab_name=rows` entries - no code changes needed for a new prefab,
-only the player's own inventory (a different UI panel, `InventoryGui.m_player`)
-isn't wired up yet.
+Built to extend to other containers later just by adding more
+`prefab_name=columns` entries - no code changes needed for a new prefab.
 
 ## Publishing to Hexium
 

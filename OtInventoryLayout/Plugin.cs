@@ -7,11 +7,16 @@ using HarmonyLib;
 
 namespace OtInventoryLayout
 {
-    // Vanilla's container UI clips to a fixed viewport sized for a 4-row inventory (e.g. the
-    // blackmetal chest's 8x4 layout). Containers with more rows than that - the 1.0 Wardrobe is
-    // 5x10 - need to be scrolled to see their full contents. This mod lets the viewport grow per
-    // container prefab so more (or all) of its rows are visible at once, without changing the
-    // container's actual width/height (so save data and item positions are untouched).
+    // Vanilla's container UI panel is sized to fit about 4 rows at its native column count (e.g.
+    // the blackmetal chest's 8x4 layout fits exactly). Containers with more rows than that - the
+    // 1.0 Wardrobe is 5x10 - need scrolling to see everything. Rather than just growing the panel
+    // taller to show every real row (which for a 10-row container would need a panel taller than
+    // fits on screen alongside the player's own, possibly-expanded, inventory), this mod *reflows*
+    // a configured container's slots into a more compact display shape - e.g. the Wardrobe's 50
+    // slots packed 8-wide become 6 full rows of 8 plus 2 leftover slots on a 7th row, matching the
+    // chest's familiar width instead of the Wardrobe's native 5-wide shape. The container's real
+    // Inventory width/height (and so its save data and item grid positions) are never touched -
+    // only each slot's on-screen position is remapped, after vanilla finishes laying out the grid.
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     public class Plugin : BaseUnityPlugin
     {
@@ -21,10 +26,10 @@ namespace OtInventoryLayout
 
         internal static ManualLogSource Log;
 
-        internal static ConfigEntry<string> VisibleRowOverridesRaw;
+        internal static ConfigEntry<string> DisplayColumnOverridesRaw;
         internal static ConfigEntry<bool> LogContainerUiHierarchy;
 
-        internal static Dictionary<string, int> VisibleRowOverrides = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        internal static Dictionary<string, int> DisplayColumnOverrides = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         private Harmony _harmony;
 
@@ -32,14 +37,18 @@ namespace OtInventoryLayout
         {
             Log = Logger;
 
-            VisibleRowOverridesRaw = Config.Bind(
+            DisplayColumnOverridesRaw = Config.Bind(
                 "General",
-                "VisibleRowOverrides",
-                "piece_wardrobe=10",
-                "Comma-separated prefab_name=rows pairs. For each listed container prefab, grows the " +
-                "container panel so up to that many rows are visible without scrolling (capped at the " +
-                "container's actual row count). Leave a prefab out to keep its vanilla panel size. " +
-                "piece_wardrobe is the Wardrobe's prefab name (5 columns x 10 rows).");
+                "DisplayColumnOverrides",
+                "piece_chestwarderobe=8",
+                "Comma-separated prefab_name=columns pairs. For each listed container prefab, repacks " +
+                "its slots into a display grid this many columns wide (rows are however many that " +
+                "takes - a container's slot count rarely divides evenly, so the last row may be " +
+                "partially filled) instead of its native column count. Leave a prefab out to keep its " +
+                "vanilla layout. piece_chestwarderobe is the Wardrobe's prefab name (note the game's " +
+                "own typo - it's \"warderobe\", not \"wardrobe\") - native layout 5 columns x 10 rows " +
+                "(50 slots), repacked at 8 columns into 6 full rows plus 2 slots on a 7th row, the " +
+                "same width as the blackmetal chest.");
 
             LogContainerUiHierarchy = Config.Bind(
                 "Debug",
@@ -50,7 +59,7 @@ namespace OtInventoryLayout
                 "resize for a given container's panel - leave off for normal play.");
 
             ReparseOverrides();
-            VisibleRowOverridesRaw.SettingChanged += (_, _) => ReparseOverrides();
+            DisplayColumnOverridesRaw.SettingChanged += (_, _) => ReparseOverrides();
 
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll();
@@ -66,10 +75,10 @@ namespace OtInventoryLayout
         private static void ReparseOverrides()
         {
             var dict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var raw = VisibleRowOverridesRaw.Value;
+            var raw = DisplayColumnOverridesRaw.Value;
             if (string.IsNullOrWhiteSpace(raw))
             {
-                VisibleRowOverrides = dict;
+                DisplayColumnOverrides = dict;
                 return;
             }
 
@@ -79,14 +88,14 @@ namespace OtInventoryLayout
                 if (parts.Length != 2)
                 {
                     Log?.LogWarning(
-                        $"VisibleRowOverrides: ignoring \"{entry.Trim()}\" - expected prefab_name=rows, e.g. \"piece_wardrobe=10\".");
+                        $"DisplayColumnOverrides: ignoring \"{entry.Trim()}\" - expected prefab_name=columns, e.g. \"piece_chestwarderobe=8\".");
                     continue;
                 }
 
                 var name = parts[0].Trim();
                 if (name.Length == 0)
                 {
-                    Log?.LogWarning($"VisibleRowOverrides: ignoring \"{entry.Trim()}\" - missing prefab name before '='.");
+                    Log?.LogWarning($"DisplayColumnOverrides: ignoring \"{entry.Trim()}\" - missing prefab name before '='.");
                     continue;
                 }
 
@@ -96,11 +105,11 @@ namespace OtInventoryLayout
                 }
                 else
                 {
-                    Log?.LogWarning($"VisibleRowOverrides: ignoring \"{entry.Trim()}\" - \"{parts[1].Trim()}\" isn't a positive whole number.");
+                    Log?.LogWarning($"DisplayColumnOverrides: ignoring \"{entry.Trim()}\" - \"{parts[1].Trim()}\" isn't a positive whole number.");
                 }
             }
 
-            VisibleRowOverrides = dict;
+            DisplayColumnOverrides = dict;
         }
     }
 }

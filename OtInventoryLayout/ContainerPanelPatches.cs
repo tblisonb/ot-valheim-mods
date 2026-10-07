@@ -24,12 +24,15 @@ namespace OtInventoryLayout
                 return;
             }
 
+            var prefabName = Utils.GetPrefabName(container.gameObject);
+            var inventory = container.GetInventory();
+            Plugin.Log.LogInfo(
+                $"Container opened: prefab={prefabName} width={inventory.GetWidth()} height={inventory.GetHeight()}");
+
             if (Plugin.LogContainerUiHierarchy.Value)
             {
                 DumpHierarchy(__instance.m_container);
             }
-
-            ContainerPanelResizer.TryResize(__instance, grid, container);
         }
 
         private static void DumpHierarchy(RectTransform root)
