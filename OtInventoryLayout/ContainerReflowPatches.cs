@@ -141,15 +141,22 @@ namespace OtInventoryLayout
             panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, targetContainerWidth);
             panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, targetContainerHeight);
 
-            // Container's pivot is (0,1) - left edge fixed growing rightward (X), top edge fixed
-            // growing downward (Y). A center-anchored child's distance from the fixed left edge
-            // only stays constant if its X offset shrinks by half the width growth, while its
-            // distance from the fixed top edge only stays constant if its Y offset *grows* by
-            // half the height growth - the signs differ because the fixed edge sits at the
-            // pivot's "min" side on X but its "max" side on Y. Worked out by hand from Unity's
-            // RectTransform.rect formula (rect = (-size*pivot, size)); confirm against
-            // LogContainerUiHierarchy if this ever looks off again.
-            var correction = new Vector2(-widthDelta / 2f, heightDelta / 2f);
+            // No X correction: the grid's own slots are horizontally *centered* within the panel
+            // (RepositionElements' origin formula), so the grid's visual center already coincides
+            // exactly with the same center-anchor point these children use - meaning a child's X
+            // offset from that point needs no adjustment to keep pace with the widening grid. (An
+            // earlier version corrected X the same way as Y - keeping a fixed distance from the
+            // panel's left edge - which instead held buttons in their old screen position while
+            // the grid visibly widened out from under them.)
+            //
+            // Y does need correcting: the grid is *top*-anchored, not centered (it only grows
+            // downward, for scrolling), so the fixed structural reference is the top edge, not
+            // the center - but the center-anchor point these children use drifts away from that
+            // fixed top edge as height grows. Pushing the Y offset out by half the height growth
+            // cancels that drift and keeps each child's distance from the top edge constant.
+            // Worked out by hand from Unity's RectTransform.rect formula (rect = (-size*pivot,
+            // size)); confirm against LogContainerUiHierarchy if this ever looks off again.
+            var correction = new Vector2(0f, heightDelta / 2f);
             for (var i = 0; i < panel.childCount; i++)
             {
                 var child = panel.GetChild(i) as RectTransform;

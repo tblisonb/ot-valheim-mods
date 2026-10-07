@@ -278,12 +278,26 @@ child of the panel that's anchored to its own center rather than stretched
 or pinned to a corner (the `TakeAll`/`StackAll`/`SortAll` buttons, the
 scrollbar track, and the `sunken` inset backdrop art) has its position
 *frozen* at a fixed pixel offset from that center anchor, which Unity
-doesn't auto-adjust when the parent resizes - without correcting for that,
-those elements visibly drift out of place as the panel grows (this is
-exactly the misaligned-buttons symptom from testing). The fix re-centers
-each one using the signed difference between the panel's fixed edge (left
-for X, top for Y - Container's pivot is `(0,1)`) and its growing edge,
-worked out by hand from Unity's `RectTransform.rect` formula; `sunken`
+doesn't auto-adjust when the parent resizes. Whether that needs correcting,
+and how, turned out to differ by axis:
+
+- **Y** does need correcting. The grid is anchored to the panel's *top*
+  edge and only grows downward (so scrolling makes sense) - but the center
+  anchor these children use drifts away from that fixed top edge as the
+  panel grows taller. Pushing their Y offset out by half the height growth
+  cancels that drift and keeps each one's distance from the top constant.
+- **X** needs no correction at all. The grid's own slots are horizontally
+  *centered* within the panel, so the grid's visual center already
+  coincides exactly with the same center-anchor point these children use -
+  a child's X offset from that point already tracks the widening grid
+  correctly on its own. The first attempt at this (mirroring the Y fix -
+  holding a constant distance from the panel's *left* edge instead) was
+  wrong: it held every button in its old screen position while the grid
+  visibly widened out from under them, which was the exact "buttons don't
+  track the width" symptom from testing.
+
+Worked out by hand from Unity's `RectTransform.rect` formula
+(`rect = (-size*pivot, size)`, Container's pivot being `(0,1)`); `sunken`
 additionally grows in size, matching the panel, since (confirmed via
 `LogContainerUiHierarchy`, see below) it and the panel border art are all
 9-sliced Unity UI sprites that resize cleanly without distortion, while the
