@@ -14,6 +14,10 @@ authors' plugins. Apply the same prefix to any new mod added to this repo.
 ## What's here
 
 ```
+OtBuildOrientation/
+  OtBuildOrientation.csproj
+  Plugin.cs                  # config
+  OrientationPatches.cs      # Alt+scroll cycles which face of a build piece rests downward
 OtBulkStation/
   OtBulkStation.csproj
   Plugin.cs                 # config + shared helpers
@@ -384,6 +388,61 @@ player's own inventory and bag-of-holding-style mods, since vanilla's rule
 lives on the base `Inventory` class, not anything container-specific. If
 that scope turns out to be too broad in practice (e.g. you only want this
 for reflowed containers), it's a one-line narrowing, not a rewrite - say so.
+
+## OtBuildOrientation
+
+Confirmed working in-game at `1.0.0`, including snapping between flipped
+and regular pieces (stone stairs, grausten pieces).
+
+Vanilla only rotates a build piece around the vertical axis (scroll wheel,
+22.5° steps), so a beam can't lie on its side and stairs can't hang upside
+down. Holding `ModifierKey` (default `LeftAlt`) while scrolling instead
+cycles which face of the piece rests downward: upright, on its left side,
+upside down, on its right side, face down, face up. Together with vanilla's
+spin, that covers every 90° orientation. A center-screen message names the
+current one, and selecting a different piece resets it to upright.
+
+Alt, because the obvious alternatives are taken in build mode: `LeftShift`
+is vanilla's "place without snapping" (`AltPlace`) and `LeftCtrl` is crouch.
+
+**How it works:** `Player.UpdatePlacementGhost` builds the ghost's rotation
+exactly once, as `Quaternion.Euler(0, 22.5 * m_placeRotation, 0)`, and
+everything after that reuses it: positioning the ghost against surfaces,
+manual snap-point offsets, snap-point matching, and the rotation
+`PlacePiece` reads off the ghost. A transpiler multiplies the chosen face
+into that one value (`spin * face`, so faces are relative to the piece's
+own facing), and all of those pick it up with no changes of their own. A
+second transpiler swaps `Player.UpdatePlacement`'s one
+`ZInput.GetMouseScrollWheel()` call for a filter that, while the modifier
+is held, consumes the scroll (so vanilla doesn't also spin) and steps the
+face instead. Both transpilers check that vanilla still makes exactly one
+such call and log an error instead of patching if a game update changes
+that. Pieces vanilla won't spin (`m_canRotate` off) and terrain ops
+(`m_groundPiece`) are left alone.
+
+One vanilla check needed loosening for flipped pieces to snap to each other.
+Before accepting a snap, `Player.IsOverlappingOtherPiece` rejects it if an
+identically-named piece already sits within 5cm of the snapped position,
+regardless of rotation unless the piece sets `m_allowRotatedOverlap` (stone
+stairs and beams don't). A stone stair's pivot is the center of its flat
+bottom face, so after flipping it upside down that face and its pivot are on
+top, and an upright stair snapped flush onto it lands on exactly the same
+pivot. Every such snap was being thrown away as a "duplicate." A postfix now
+only counts a same-position piece as a duplicate if its up direction matches
+too. Unflipped pairs always match, so vanilla's verdict is unchanged for
+them, and two pieces flipped the same way still block each other.
+
+Snap-point layouts came from reading the prefabs straight out of the game's
+asset bundles (`valheim_Data/StreamingAssets/SoftRef/Bundles/`) with
+[UnityPy](https://github.com/K0lb3/UnityPy): snap points are child
+`Transform`s named `$hud_snappoint_*`, and `Piece` fields such as
+`m_allowRotatedOverlap` read out via the MonoBehaviour typetree. E.g.
+`stone_stair` is 2m x 2m and rises 1m from front (+Z) to back (-Z), with snap
+points along its bottom-front, bottom-back and top-back edges.
+
+The placed rotation is stored on the piece itself, so players without the
+mod should still see flipped pieces correctly. That's expected from how
+vanilla saves pieces but not yet confirmed. Gamepad input isn't handled.
 
 ## Publishing to Hexium
 

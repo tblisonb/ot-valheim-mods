@@ -1,0 +1,6 @@
+{
+    "name": "OtBuildOrientation",
+    "description": "Hold Alt and scroll while building to flip pieces onto their side, upside down, or face down/up - lay a beam sideways or hang stairs upside down - with snapping still working between flipped and regular pieces.",
+    "website_url": "https://github.com/tblisonb/ot-valheim-mods/tree/main/OtBuildOrientation",
+    "dependencies": []
+}
