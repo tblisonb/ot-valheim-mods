@@ -232,11 +232,16 @@ vanilla range as counted toward the station's level.
 
 ## OtInventoryLayout
 
-**Work in progress** - not yet confirmed working in-game.
+**Work in progress.** The panel-resize mechanism (growing the panel/backdrop
+art to fit extra display rows) is confirmed working in-game - tested with no
+override configured, the Wardrobe correctly rendered its full 5x10 grid with
+no scrollbar. The actual column-reflow (packing it into 8 columns instead)
+hasn't been visually confirmed yet - the prefab-name bug described below
+meant no override had ever actually applied until it was found and fixed.
 
 Vanilla's container UI panel is sized to fit about 4 rows at its native
 column count (e.g. the blackmetal chest's 8x4 layout fits exactly). The 1.0
-Wardrobe (`piece_chestwarderobe` - note the game's own typo, "warderobe" not
+Wardrobe (`piece_chest_warderobe` - note the game's own typo, "warderobe" not
 "wardrobe") is 5 columns x 10 rows, so more than half of it is hidden below
 the fold every time it's opened.
 
@@ -284,9 +289,16 @@ A `LogContainerUiHierarchy` debug config (off by default) dumps the full
 RectTransform/component tree under the container panel to the log every
 time a container opens - how the real panel structure (not just the
 decompiled C#, which doesn't show Unity prefab wiring like child names,
-anchors, or background art) was confirmed, and the only lead that caught the
-`piece_wardrobe` vs. actual `piece_chestwarderobe` prefab-name mismatch that
-silently no-op'd the first version of this mod.
+anchors, or background art) was confirmed. `ContainerPanelPatches.cs` also
+always logs `prefab=... width=... height=...` on every container open
+(regardless of that debug flag), which is what actually caught two
+successive prefab-name mismatches that silently no-op'd every override
+before them: first `piece_wardrobe` vs. the real `piece_chest_warderobe`,
+then `piece_chestwarderobe` (matching the in-game localization string,
+which has no underscore) vs. the real prefab name, which does. Lesson for
+adding more overrides later: trust this log line's `prefab=` value over any
+localization string or wiki "Internal ID" field - they don't always match
+the literal `GameObject` name exactly.
 
 Built to extend to other containers later just by adding more
 `prefab_name=columns` entries - no code changes needed for a new prefab.

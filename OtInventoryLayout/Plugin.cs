@@ -40,15 +40,15 @@ namespace OtInventoryLayout
             DisplayColumnOverridesRaw = Config.Bind(
                 "General",
                 "DisplayColumnOverrides",
-                "piece_chestwarderobe=8",
+                "piece_chest_warderobe=8",
                 "Comma-separated prefab_name=columns pairs. For each listed container prefab, repacks " +
                 "its slots into a display grid this many columns wide (rows are however many that " +
                 "takes - a container's slot count rarely divides evenly, so the last row may be " +
                 "partially filled) instead of its native column count. Leave a prefab out to keep its " +
-                "vanilla layout. piece_chestwarderobe is the Wardrobe's prefab name (note the game's " +
+                "vanilla layout. piece_chest_warderobe is the Wardrobe's prefab name (note the game's " +
                 "own typo - it's \"warderobe\", not \"wardrobe\") - native layout 5 columns x 10 rows " +
                 "(50 slots), repacked at 8 columns into 6 full rows plus 2 slots on a 7th row, the " +
-                "same width as the blackmetal chest.");
+                "same width as the blackmetal chest (piece_chest_blackmetal).");
 
             LogContainerUiHierarchy = Config.Bind(
                 "Debug",
@@ -88,7 +88,7 @@ namespace OtInventoryLayout
                 if (parts.Length != 2)
                 {
                     Log?.LogWarning(
-                        $"DisplayColumnOverrides: ignoring \"{entry.Trim()}\" - expected prefab_name=columns, e.g. \"piece_chestwarderobe=8\".");
+                        $"DisplayColumnOverrides: ignoring \"{entry.Trim()}\" - expected prefab_name=columns, e.g. \"piece_chest_warderobe=8\".");
                     continue;
                 }
 
