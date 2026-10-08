@@ -2,11 +2,9 @@
 
 ## Unreleased
 
-- Pick block: with the hammer out, hold `CopyModifierKey` (default
-  `LeftControl`) and press remove (middle mouse) to select the build piece
-  you're looking at, in its orientation and spin. Never removes the piece.
-- Vanilla's own copy (Left Shift + middle mouse) now copies a piece's
-  orientation too, not just its spin.
+- `CopyOrientation` (default `true`): vanilla's piece copy (Left Shift +
+  middle mouse) now copies a flipped piece's orientation, not just its
+  spin.
 
 ## 1.0.0
 

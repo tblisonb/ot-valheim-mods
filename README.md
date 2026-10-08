@@ -443,20 +443,14 @@ asset bundles (`valheim_Data/StreamingAssets/SoftRef/Bundles/`) with
 `stone_stair` is 2m x 2m and rises 1m from front (+Z) to back (-Z), with snap
 points along its bottom-front, bottom-back and top-back edges.
 
-**Pick block (unreleased, untested):** vanilla already has this:
-`Player.CopyPiece`, bound to `AltPlace` (`LeftShift`) + `Remove` (middle
-mouse). It selects the hovered piece in the build menu and copies its spin,
-recovered from the piece's yaw. `CopyModifierKey` (default `LeftControl`, as
-requested, even though that's also the crouch toggle) + `Remove` is a second
-binding that calls the same method. Without `AltPlace` held, vanilla
-treats `Remove`'s release as "remove the hovered piece". A prefix sets
-`m_blockRemove` on every frame from the press through the release, which
-works because vanilla clears it only after its release check. Copying a
-flipped piece by its yaw gives the wrong rotation, so a `CopyPiece` postfix
-(fed the piece through a `SetSelectedPiece(Piece)` postfix, since
-`CopyPiece` doesn't return it) searches every spin step x face for the
-combination closest to the piece's actual rotation. That applies to both
-bindings.
+**Copy orientation (unreleased, untested):** vanilla already has pick
+block: `Player.CopyPiece`, bound to `AltPlace` (`LeftShift`) + `Remove`
+(middle mouse). It selects the hovered piece in the build menu and copies
+its spin, recovered from the piece's yaw, which is wrong for a flipped
+piece. With `CopyOrientation` on (default), a `CopyPiece` postfix searches
+every spin step x face for the combination closest to the piece's actual
+rotation. `CopyPiece` doesn't return the piece, so a
+`SetSelectedPiece(Piece)` postfix captures it while `CopyPiece` runs.
 
 The placed rotation is stored on the piece itself, so players without the
 mod should still see flipped pieces correctly. That's expected from how
