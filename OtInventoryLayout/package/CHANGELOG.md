@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `DisplayColumnOverrides` now defaults the Wardrobe to 10 columns (exactly
+  5 full rows) instead of 8. Existing config files keep whatever value they
+  already have.
+
 ## 1.0.0
 
 Initial release.

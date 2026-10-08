@@ -40,6 +40,12 @@ namespace OtBuildOrientation
         private static readonly AccessTools.FieldRef<Player, PieceTable> BuildPieces =
             AccessTools.FieldRefAccess<Player, PieceTable>("m_buildPieces");
 
+        private static readonly AccessTools.FieldRef<Player, int> PlaceRotation =
+            AccessTools.FieldRefAccess<Player, int>("m_placeRotation");
+
+        private static readonly AccessTools.FieldRef<Player, float> PlaceRotationDegrees =
+            AccessTools.FieldRefAccess<Player, float>("m_placeRotationDegrees");
+
         private static int _index;
         private static float _scrollAccumulated;
         private static string _lastSelectedPrefab;
@@ -103,6 +109,36 @@ namespace OtBuildOrientation
                 return spin;
             }
             return spin * Rotations[_index];
+        }
+
+        // Vanilla's CopyPiece recovers only the spin, from the copied piece's yaw - wrong for a
+        // flipped piece, whose euler Y no longer means "spin". Instead find the (spin, face) pair
+        // whose combined rotation is closest to the piece's actual rotation. Runs after CopyPiece has
+        // selected the piece (and SetupPlacementGhost has reset the face), so it has the final say.
+        internal static void MatchCopiedPiece(Player player, Piece piece)
+        {
+            if (!CanOrient(player))
+            {
+                return;
+            }
+
+            float degrees = PlaceRotationDegrees(player);
+            int spins = Mathf.Max(1, Mathf.RoundToInt(360f / degrees));
+            var target = piece.transform.rotation;
+            float best = float.MaxValue;
+            for (int face = 0; face < Rotations.Length; face++)
+            {
+                for (int spin = 0; spin < spins; spin++)
+                {
+                    float angle = Quaternion.Angle(Quaternion.Euler(0f, degrees * spin, 0f) * Rotations[face], target);
+                    if (angle < best)
+                    {
+                        best = angle;
+                        _index = face;
+                        PlaceRotation(player) = spin;
+                    }
+                }
+            }
         }
 
         // SetupPlacementGhost reruns whenever the available piece list refreshes, not only when a

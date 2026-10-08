@@ -8,8 +8,8 @@ The 1.0 Wardrobe is 5 columns x 10 rows under the hood, which is taller than
 the container UI panel is built to show without scrolling. Rather than just
 growing the panel to fit all 10 real rows (which doesn't reliably fit on
 screen next to your own, possibly-expanded, inventory), this mod *reflows*
-the Wardrobe's 50 slots into 8 columns instead - the same width as the
-blackmetal chest - landing on 6 full rows plus 2 slots on a 7th. Only the
+the Wardrobe's 50 slots into 10 columns instead, landing on exactly 5 full
+rows, which fits the panel at the standard UI scale. Only the
 on-screen position of each slot changes; the container's actual width/height,
 save data, and item positions are completely untouched, and every click/drag
 interaction keeps working normally.
@@ -20,7 +20,7 @@ Both settings live in
 `BepInEx/config/tlisonbee.valheim.otinventorylayout.cfg`, editable directly or
 via a mod config manager (e.g. BepInEx Configuration Manager):
 
-- **`DisplayColumnOverrides`** (default `piece_chest_warderobe=8`) -
+- **`DisplayColumnOverrides`** (default `piece_chest_warderobe=10`) -
   comma-separated `prefab_name=columns` pairs. For each listed container
   prefab, repacks its slots into a display grid this many columns wide
   (rows are however many that takes). Leave a prefab out to keep its

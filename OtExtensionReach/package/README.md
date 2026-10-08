@@ -23,7 +23,7 @@ via a mod config manager (e.g. BepInEx Configuration Manager):
   the station's level bonus. Raising it extends both together, so a
   far-flung upgrade still actually works instead of becoming decorative.
   Applies immediately, including to upgrades already built.
-- **`DisableSpaceRequirement`** (default `false`) - lets upgrades be placed
+- **`DisableSpaceRequirement`** (default `true`) - lets upgrades be placed
   right next to each other. Purely cosmetic placement gating; doesn't affect
   the bonus.
 

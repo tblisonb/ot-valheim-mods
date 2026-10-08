@@ -47,7 +47,7 @@ namespace OtExtensionReach
             DisableSpaceRequirement = Config.Bind(
                 "General",
                 "DisableSpaceRequirement",
-                false,
+                true,
                 "Lets crafting station upgrades be placed right next to each other instead of needing " +
                 "clear space between them. Purely a placement-UI restriction - has no effect on " +
                 "whether the station's level bonus applies.");

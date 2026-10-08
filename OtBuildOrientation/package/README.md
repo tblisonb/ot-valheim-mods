@@ -25,6 +25,21 @@ A placed piece's rotation is saved with the piece itself, so players
 without the mod should see flipped pieces as placed. This follows from how
 the game saves pieces but hasn't been tested in multiplayer yet.
 
+## Copying a piece
+
+With the hammer out, look at any built piece, hold **Left Ctrl** and press
+the remove button (middle mouse by default). That piece becomes your
+selected build piece, in the same orientation and spin it was built with,
+like Minecraft's pick block. It never removes the piece. If you can't build
+that piece (missing recipe or station), you get vanilla's "missing
+requirement" message instead.
+
+Vanilla already has this on **Left Shift** + middle mouse, but it only
+copies the spin. With this mod installed, that binding copies the
+orientation too.
+
+Left Ctrl is also vanilla's crouch key, so pressing it toggles crouch.
+
 ## Configuration
 
 `BepInEx/config/tlisonbee.valheim.otbuildorientation.cfg`, editable directly
@@ -33,6 +48,9 @@ or via a mod config manager (e.g. BepInEx Configuration Manager):
 - **`ModifierKey`** (default `LeftAlt`) - the key to hold while scrolling.
   Avoid `LeftShift` (vanilla's "place without snapping") and `LeftControl`
   (crouch).
+- **`CopyModifierKey`** (default `LeftControl`) - the key to hold while
+  pressing remove to copy the piece you're looking at. Set to `None` to
+  turn off this binding (vanilla's Left Shift one keeps working).
 
 ## Source
 

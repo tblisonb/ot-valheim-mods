@@ -12,7 +12,8 @@ namespace OtBuildOrientation
     // on its left side, upside down, on its right side, face down, face up). Combined with vanilla's
     // spin that covers every 90° orientation. The orientation is folded into the same rotation
     // vanilla builds the placement ghost from, so snapping, manual snap-point cycling and the
-    // placed piece itself all pick it up without any changes of their own.
+    // placed piece itself all pick it up without any changes of their own. CopyModifierKey + remove
+    // adds a pick-block binding (see CopyPatches.cs).
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     public class Plugin : BaseUnityPlugin
     {
@@ -23,6 +24,7 @@ namespace OtBuildOrientation
         internal static ManualLogSource Log;
 
         internal static ConfigEntry<KeyCode> ModifierKey;
+        internal static ConfigEntry<KeyCode> CopyModifierKey;
 
         private Harmony _harmony;
 
@@ -38,6 +40,16 @@ namespace OtBuildOrientation
                 "rests downward. Scrolling without it keeps vanilla's spin around the vertical axis. " +
                 "Avoid LeftShift (vanilla's 'place without snapping') and LeftControl (crouch).");
 
+            CopyModifierKey = Config.Bind(
+                "General",
+                "CopyModifierKey",
+                KeyCode.LeftControl,
+                "Hold this and press the remove button (middle mouse by default) while the hammer is out " +
+                "to select the build piece you're looking at, in the same orientation and spin it was " +
+                "built with - like Minecraft's pick block. Never removes the piece. Vanilla's own " +
+                "LeftShift + remove does the same and keeps working alongside this. Set to None to " +
+                "disable. Note LeftControl is also vanilla's crouch toggle, so pressing it toggles crouch.");
+
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll();
 
@@ -50,5 +62,8 @@ namespace OtBuildOrientation
         }
 
         internal static bool IsModifierHeld() => ZInput.GetKey(ModifierKey.Value, false);
+
+        internal static bool IsCopyModifierHeld() =>
+            CopyModifierKey.Value != KeyCode.None && ZInput.GetKey(CopyModifierKey.Value, false);
     }
 }

@@ -28,8 +28,8 @@ namespace OtInventoryLayout
     // taller to show every real row (which for a 10-row container would need a panel taller than
     // fits on screen alongside the player's own, possibly-expanded, inventory), this mod *reflows*
     // a configured container's slots into a more compact display shape - e.g. the Wardrobe's 50
-    // slots packed 8-wide become 6 full rows of 8 plus 2 leftover slots on a 7th row, matching the
-    // chest's familiar width instead of the Wardrobe's native 5-wide shape. The container's real
+    // slots packed 10-wide become exactly 5 full rows instead of the Wardrobe's native 5-wide
+    // shape. The container's real
     // Inventory width/height (and so its save data and item grid positions) are never touched -
     // only each slot's on-screen position is remapped, after vanilla finishes laying out the grid.
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
@@ -56,15 +56,14 @@ namespace OtInventoryLayout
             DisplayColumnOverridesRaw = Config.Bind(
                 "General",
                 "DisplayColumnOverrides",
-                "piece_chest_warderobe=8",
+                "piece_chest_warderobe=10",
                 "Comma-separated prefab_name=columns pairs. For each listed container prefab, repacks " +
                 "its slots into a display grid this many columns wide (rows are however many that " +
                 "takes - a container's slot count rarely divides evenly, so the last row may be " +
                 "partially filled) instead of its native column count. Leave a prefab out to keep its " +
                 "vanilla layout. piece_chest_warderobe is the Wardrobe's prefab name (note the game's " +
                 "own typo - it's \"warderobe\", not \"wardrobe\") - native layout 5 columns x 10 rows " +
-                "(50 slots), repacked at 8 columns into 6 full rows plus 2 slots on a 7th row, the " +
-                "same width as the blackmetal chest (piece_chest_blackmetal).");
+                "(50 slots), repacked at 10 columns into exactly 5 full rows.");
 
             StackPlacementModeConfig = Config.Bind(
                 "General",

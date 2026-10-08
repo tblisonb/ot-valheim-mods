@@ -239,8 +239,9 @@ Two configs, in `BepInEx/config/tlisonbee.valheim.otextensionreach.cfg`:
   you build somewhere the bonus silently never applies. Applies immediately,
   including to upgrades already built (re-applied on every config change, no
   relog needed).
-- `DisableSpaceRequirement` (default `false`) - lets upgrades be placed right
-  next to each other. Purely cosmetic UI gating; doesn't affect the bonus.
+- `DisableSpaceRequirement` (default `true`, was `false` in `1.0.0`) - lets
+  upgrades be placed right next to each other. Purely cosmetic UI gating;
+  doesn't affect the bonus.
 
 **Multiplayer note:** since both checks (and the level-bonus calculation
 itself) run per-client, every player should run this mod for consistent
@@ -250,7 +251,7 @@ vanilla range as counted toward the station's level.
 ## OtInventoryLayout
 
 Confirmed working in-game at `1.0.0`: the Wardrobe correctly reflows into
-6 full rows of 8 plus 2 leftover slots on a 7th row (the default
+6 full rows of 8 plus 2 leftover slots on a 7th row (the `1.0.0` default
 `DisplayColumnOverrides` setting), buttons/backdrop art track the panel at
 any configured width, and Ctrl+click placement lands where expected under
 all three `StackPlacementMode` settings (see near the end of this section).
@@ -269,7 +270,9 @@ this **reflows** a configured container's slots into a more compact display
 shape instead of growing to fit its native one - the Wardrobe's 50 slots,
 packed 8-wide (the same width as the blackmetal chest, which already fits
 the panel with no changes needed), become 6 full rows plus 2 leftover slots
-on a 7th row, via `DisplayColumnOverrides` in
+on a 7th row (since changed to a 10-wide default: exactly 5 full rows,
+which fits at the standard UI scale and looks better), via
+`DisplayColumnOverrides` in
 `BepInEx/config/tlisonbee.valheim.otinventorylayout.cfg` (comma-separated
 `prefab_name=columns`, e.g. `piece_chest_warderobe=8`). Only each slot's
 *on-screen position* is remapped (linear index order preserved, just
@@ -439,6 +442,21 @@ asset bundles (`valheim_Data/StreamingAssets/SoftRef/Bundles/`) with
 `m_allowRotatedOverlap` read out via the MonoBehaviour typetree. E.g.
 `stone_stair` is 2m x 2m and rises 1m from front (+Z) to back (-Z), with snap
 points along its bottom-front, bottom-back and top-back edges.
+
+**Pick block (unreleased, untested):** vanilla already has this:
+`Player.CopyPiece`, bound to `AltPlace` (`LeftShift`) + `Remove` (middle
+mouse). It selects the hovered piece in the build menu and copies its spin,
+recovered from the piece's yaw. `CopyModifierKey` (default `LeftControl`, as
+requested, even though that's also the crouch toggle) + `Remove` is a second
+binding that calls the same method. Without `AltPlace` held, vanilla
+treats `Remove`'s release as "remove the hovered piece". A prefix sets
+`m_blockRemove` on every frame from the press through the release, which
+works because vanilla clears it only after its release check. Copying a
+flipped piece by its yaw gives the wrong rotation, so a `CopyPiece` postfix
+(fed the piece through a `SetSelectedPiece(Piece)` postfix, since
+`CopyPiece` doesn't return it) searches every spin step x face for the
+combination closest to the piece's actual rotation. That applies to both
+bindings.
 
 The placed rotation is stored on the piece itself, so players without the
 mod should still see flipped pieces correctly. That's expected from how
