@@ -1,0 +1,6 @@
+{
+    "name": "OtArmorStand",
+    "description": "Open armor stands like a chest: drag gear into each slot from your inventory, take it all back at once, or swap the stand's armor with what you're wearing.",
+    "website_url": "https://github.com/tblisonb/ot-valheim-mods/tree/main/OtArmorStand",
+    "dependencies": []
+}

@@ -14,6 +14,13 @@ authors' plugins. Apply the same prefix to any new mod added to this repo.
 ## What's here
 
 ```
+OtArmorStand/
+  OtArmorStand.csproj
+  Plugin.cs                  # config
+  StandSession.cs            # mirrors a stand's slots into a temporary Inventory and back
+  StandPatches.cs            # Use opens/swaps, slot-type rules for drops and shift-clicks
+  GuiPatches.cs              # per-frame sync, Swap button in place of Place stacks
+  package/
 OtBuildOrientation/
   OtBuildOrientation.csproj
   Plugin.cs                  # config
@@ -57,6 +64,7 @@ libs/                        # reference-only DLLs (not redistributed, see below
   UnityEngine.dll
   UnityEngine.CoreModule.dll
   UnityEngine.UI.dll          # ScrollRect, Mask, Image, etc.
+  Unity.TextMeshPro.dll       # TMP_Text, for relabeling cloned buttons
 ```
 
 `libs/` only holds *reference assemblies* used at compile time (`<Private>false</Private>`
@@ -542,6 +550,43 @@ Haldor's shop once each `UnlockKey` is set (`defeated_gdking`,
 three aren't in the `GlobalKeys` enum; they were read from the boss
 prefabs with UnityPy. The final boss's is set by its last phase
 (`FrozenKing_p3`) and is also what the Bog Witch's stock checks.
+
+## OtArmorStand
+
+Not yet confirmed in-game. Use on an armor stand opens vanilla's container
+panel on a 5x2 grid, one cell per slot (armor on top, hands and back
+below), and Shift+Use swaps armor with what the player wears.
+
+**Vanilla's Use:** the helmet, chest, legs, cape and belt slots share one
+hover `Switch` ("block body"), and `ArmorStand.UseItem` with no item
+calls `RPC_DropItemByName` with that switch's name, which drops every slot
+under it. That's why Use empties all the armor at once while the hand and
+back slots (their own switches) drop one by one.
+
+**Storage:** the stand's ZDO (`<slot>_item`, `<slot>_variant`,
+`<slot>_itemData` via `ItemDrop.SaveToZDO`) stays the only storage. The
+panel edits a temporary `Inventory` built from it, and an `InventoryGui`
+postfix writes back every cell whose item changed, each frame, with
+vanilla's `RPC_SetVisualItem` (plus the private `UpdateSupports`, which
+`SetVisualItem` skips when clearing). Slots holding an item whose prefab
+this client lacks are left out of the mirror so they can't be cleared.
+
+**The stand-in Container:** `InventoryGui.Show` needs a `Container`. The
+mod adds one on an inactive child of the stand, with its private
+`m_nview` and `m_inventory` set by reflection. Inactive means its `Awake`
+never runs: no RPCs registered on the stand's `ZNetView` (they'd collide
+on the next open), no `s_items` save, no drop-everything on destroy (which
+would duplicate the stand's own drop), and `FindObjectsOfType` skips it,
+so chest-scanning mods don't see it. Being a child of the stand makes the
+panel close if the stand is destroyed.
+
+**Ownership:** edits only stick while this client owns the stand's ZDO.
+Opening asks with vanilla's `RPC_RequestOwn` (every client has it, so a
+vanilla owner hands over too) and waits up to 2 s. While the panel is
+open, a prefix makes this client's `RPC_RequestOwn` refuse, so nobody can
+take the stand mid-edit; the other side's request just times out
+("in use"). Nothing is written to the ZDO for this, so a crash can't leave
+a stand locked.
 
 ## Publishing to Hexium
 
