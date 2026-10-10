@@ -14,7 +14,6 @@ namespace OtArmorStand
     internal static class CellPatches
     {
         private const string GhostName = "OtArmorStand_Ghost";
-        private static readonly Color GhostColor = new Color(0.55f, 0.55f, 0.55f, 0.35f);
 
         private static readonly AccessTools.FieldRef<InventoryGrid, List<InventoryElement>> Elements =
             AccessTools.FieldRefAccess<InventoryGrid, List<InventoryElement>>("m_elements");
@@ -55,6 +54,9 @@ namespace OtArmorStand
                 Describe(slot, out string prefab, out string label);
                 ghost.sprite = Icon(prefab);
                 ghost.enabled = ghost.sprite != null;
+                // Read every frame so edits through a config manager show up live.
+                float brightness = Mathf.Clamp01(Plugin.PlaceholderBrightness.Value);
+                ghost.color = new Color(brightness, brightness, brightness, Mathf.Clamp01(Plugin.PlaceholderOpacity.Value));
                 element.m_tooltip.m_topic = label;
             }
         }
@@ -99,7 +101,6 @@ namespace OtArmorStand
             var image = go.GetComponent<Image>();
             image.raycastTarget = false;
             image.preserveAspect = true;
-            image.color = GhostColor;
             return image;
         }
 
@@ -134,7 +135,7 @@ namespace OtArmorStand
             }
             GameObject go = ObjectDB.instance != null ? ObjectDB.instance.GetItemPrefab(prefab) : null;
             ItemDrop drop = go != null ? go.GetComponent<ItemDrop>() : null;
-            sprite = drop != null ? drop.m_itemData.GetIcon() : null;
+            sprite = drop != null ? Grayscale.Sprite(drop.m_itemData.GetIcon()) : null;
             if (sprite == null)
             {
                 Plugin.Log.LogWarning($"No icon for slot placeholder {prefab}; that slot's cell stays blank.");

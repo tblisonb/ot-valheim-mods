@@ -16,7 +16,7 @@ chest with one cell per slot, laid out like the body:
          Legs
 ```
 
-Empty cells show a faded icon of what goes there, and hovering one names
+Empty cells show a faded black-and-white icon of what goes there, and hovering one names
 the slot.
 
 - **Drag** gear in or out like any chest. Dropping a piece on the wrong
@@ -42,6 +42,8 @@ Only one player can have a stand open at a time, like a chest.
 |---|---|---|
 | `AltUseSwaps` | `true` | Left Shift + E on a stand swaps armor instead of opening it (the alternate-place key, rebindable in the game's controls). |
 | `ShowSwapButton` | `true` | Show the Swap armor button on an open stand. |
+| `Placeholders.Opacity` | `0.45` | Opacity of the black-and-white icons in empty cells (0 hides them). |
+| `Placeholders.Brightness` | `0.6` | How bright those icons are; lower is darker. |
 
 ## Multiplayer
 

@@ -23,6 +23,8 @@ namespace OtArmorStand
 
         internal static ConfigEntry<bool> AltUseSwaps;
         internal static ConfigEntry<bool> ShowSwapButton;
+        internal static ConfigEntry<float> PlaceholderOpacity;
+        internal static ConfigEntry<float> PlaceholderBrightness;
 
         private Harmony _harmony;
 
@@ -42,6 +44,18 @@ namespace OtArmorStand
                 true,
                 "Show a Swap button on an open armor stand's panel, in place of Place stacks (which " +
                 "does nothing on a stand).");
+            PlaceholderOpacity = Config.Bind(
+                "Placeholders",
+                "Opacity",
+                0.45f,
+                "Opacity (0-1) of the black-and-white icon an empty slot shows of what goes there. " +
+                "0 hides them.");
+            PlaceholderBrightness = Config.Bind(
+                "Placeholders",
+                "Brightness",
+                0.6f,
+                "Brightness (0-1) of the placeholder icons: 1 keeps the icon's own grey levels, lower " +
+                "values darken it toward black.");
 
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll();
