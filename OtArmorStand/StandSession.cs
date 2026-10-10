@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -73,36 +74,47 @@ namespace OtArmorStand
         // Slots holding an item whose prefab isn't known here (from a mod this client lacks). They're
         // left alone rather than mirrored, so writing back can't clear them.
         private readonly bool[] _locked;
+        // Slots with a cell: the first slot for each VisSlot.
+        private readonly bool[] _mirrored;
 
         private StandSession(ArmorStand stand)
         {
             Stand = stand;
             View = StandView(stand);
 
+            // The buildable stand lists each of its seven slots twice (same switch, same VisSlot).
+            // Vanilla only ever attaches to the first of a pair, so only that one gets a cell.
             int slotCount = stand.m_slots.Count;
-            int cellCount = Math.Max(CellOrder.Length, slotCount);
-            int height = (cellCount + Width - 1) / Width;
             _cellOfSlot = new Vector2i[slotCount];
+            _mirrored = new bool[slotCount];
+            var primaries = new List<int>();
+            for (int i = 0; i < slotCount; i++)
+            {
+                if (PrimaryOf(i) == i)
+                {
+                    primaries.Add(i);
+                }
+            }
+            int cellCount = Math.Max(CellOrder.Length, primaries.Count);
+            int height = (cellCount + Width - 1) / Width;
             _slotAtCell = new int[Width * height];
             for (int i = 0; i < _slotAtCell.Length; i++)
             {
                 _slotAtCell[i] = -1;
             }
-            var placed = new bool[slotCount];
-            for (int i = 0; i < slotCount; i++)
+            foreach (int slot in primaries)
             {
-                int cell = Array.IndexOf(CellOrder, stand.m_slots[i].m_slot);
-                if (cell >= 0 && _slotAtCell[cell] < 0)
+                int cell = Array.IndexOf(CellOrder, stand.m_slots[slot].m_slot);
+                if (cell >= 0)
                 {
-                    Place(i, cell);
-                    placed[i] = true;
+                    Place(slot, cell);
                 }
             }
-            for (int i = 0; i < slotCount; i++)
+            foreach (int slot in primaries)
             {
-                if (!placed[i])
+                if (!_mirrored[slot])
                 {
-                    Place(i, Array.IndexOf(_slotAtCell, -1));
+                    Place(slot, Array.IndexOf(_slotAtCell, -1));
                 }
             }
 
@@ -111,26 +123,16 @@ namespace OtArmorStand
             _written = new ItemDrop.ItemData[slotCount];
             _locked = new bool[slotCount];
             ZDO zdo = View.GetZDO();
-            for (int i = 0; i < slotCount; i++)
+            foreach (int slot in primaries)
             {
-                int hash = zdo.GetInt(ItemKey(i));
-                if (hash == 0)
+                ItemDrop.ItemData item = LoadItem(zdo, slot);
+                if (item != null)
                 {
-                    continue;
+                    Inventory.AddItem(item, _cellOfSlot[slot]);
+                    _written[slot] = item;
                 }
-                GameObject prefab = ObjectDB.instance.GetItemPrefab(hash);
-                if (prefab == null)
-                {
-                    _locked[i] = true;
-                    continue;
-                }
-                ItemDrop.ItemData item = prefab.GetComponent<ItemDrop>().m_itemData.Clone();
-                item.m_dropPrefab = prefab;
-                item.m_stack = 1;
-                ItemDrop.LoadFromZDO(item, zdo, i);
-                Inventory.AddItem(item, _cellOfSlot[i]);
-                _written[i] = item;
             }
+            RecoverDuplicates(zdo);
 
             // InventoryGui.Show wants a Container. This one stays inactive so its Awake never runs:
             // no RPCs registered on the stand's ZNetView, no ZDO save of its own, no drop-on-destroy,
@@ -150,13 +152,112 @@ namespace OtArmorStand
         {
             _slotAtCell[cell] = slot;
             _cellOfSlot[slot] = new Vector2i(cell % Width, cell / Width);
+            _mirrored[slot] = true;
+        }
+
+        private int PrimaryOf(int slot)
+        {
+            VisSlot visSlot = Stand.m_slots[slot].m_slot;
+            return Stand.m_slots.FindIndex(s => s.m_slot == visSlot);
+        }
+
+        // The item saved in a slot, or null if it's empty. An item whose prefab this client doesn't
+        // have (another mod's) locks the slot instead, so writing back can't clear it.
+        private ItemDrop.ItemData LoadItem(ZDO zdo, int slot)
+        {
+            int hash = zdo.GetInt(ItemKey(slot));
+            if (hash == 0)
+            {
+                return null;
+            }
+            GameObject prefab = ObjectDB.instance.GetItemPrefab(hash);
+            if (prefab == null)
+            {
+                _locked[slot] = true;
+                return null;
+            }
+            ItemDrop.ItemData item = prefab.GetComponent<ItemDrop>().m_itemData.Clone();
+            item.m_dropPrefab = prefab;
+            item.m_stack = 1;
+            ItemDrop.LoadFromZDO(item, zdo, slot);
+            return item;
+        }
+
+        // 1.0.0 gave the duplicate slots their own cells, so a stand can hold a second piece there
+        // that it never shows (both of a pair draw to the same VisEquipment slot). Move it into its
+        // primary slot if that's free, otherwise drop it the vanilla way. Either way the duplicate's
+        // visual clear also blanks the primary's shared VisEquipment slot, so redraw the primaries.
+        private void RecoverDuplicates(ZDO zdo)
+        {
+            bool recovered = false;
+            for (int slot = 0; slot < _mirrored.Length; slot++)
+            {
+                if (_mirrored[slot] || zdo.GetInt(ItemKey(slot)) == 0)
+                {
+                    continue;
+                }
+                int primary = PrimaryOf(slot);
+                Vector2i cell = _cellOfSlot[primary];
+                recovered = true;
+                ItemDrop.ItemData item = _locked[primary] || Inventory.GetItemAt(cell.x, cell.y) != null ? null : LoadItem(zdo, slot);
+                if (item != null)
+                {
+                    Inventory.AddItem(item, cell);
+                    zdo.Set(ItemKey(slot), 0);
+                    View.InvokeRPC(ZNetView.Everybody, "RPC_SetVisualItem", slot, 0, 0);
+                }
+                else
+                {
+                    View.InvokeRPC("RPC_DropItem", slot);
+                }
+            }
+            if (!recovered)
+            {
+                return;
+            }
+            Plugin.Log.LogInfo($"Recovered items from duplicate slots of {Stand.name}.");
+            Sync();
+            for (int slot = 0; slot < _written.Length; slot++)
+            {
+                ItemDrop.ItemData item = _written[slot];
+                if (_mirrored[slot] && item != null)
+                {
+                    int hash = item.m_dropPrefab.name.GetStableHashCode();
+                    View.InvokeRPC(ZNetView.Everybody, "RPC_SetVisualItem", slot, 0, 0);
+                    View.InvokeRPC(ZNetView.Everybody, "RPC_SetVisualItem", slot, hash, item.m_variant);
+                }
+            }
+        }
+
+        // Puts back any item another mod moved to the wrong cell (chest sorters sort this panel
+        // too). One with no free cell of its own goes to the player's inventory, or the ground.
+        private void Normalize()
+        {
+            foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(Inventory.GetAllItems()))
+            {
+                if (Fits(item.m_gridPos, item))
+                {
+                    continue;
+                }
+                Vector2i cell = FindCell(item);
+                if (cell.x >= 0)
+                {
+                    item.m_gridPos = cell;
+                    continue;
+                }
+                Inventory.RemoveItem(item);
+                Player player = Player.m_localPlayer;
+                if (player == null || !player.GetInventory().AddItem(item))
+                {
+                    Vector3 at = player != null ? player.transform.position : Stand.transform.position;
+                    ItemDrop.DropItem(item, 0, at + Vector3.up, Quaternion.identity);
+                }
+            }
         }
 
         private static int ItemKey(int slot) => (slot + "_item").GetStableHashCode();
 
         private static int VariantKey(int slot) => (slot + "_variant").GetStableHashCode();
-
-        internal static ZNetView ViewOf(ArmorStand stand) => StandView(stand);
 
         // Asks for ownership of the stand (vanilla's RPC_RequestOwn, which every client has) and
         // runs the action once it arrives; UpdatePending polls for it.
@@ -244,6 +345,7 @@ namespace OtArmorStand
                 Current = null;
                 return;
             }
+            Current.Normalize();
             Current.Sync();
             if (shown != Current.Stub)
             {
@@ -280,8 +382,6 @@ namespace OtArmorStand
             }
         }
 
-        internal bool IsCellOf(Inventory inventory) => inventory == Inventory;
-
         // Whether the item may sit in the given cell: the vanilla attach rules for that cell's slot.
         internal bool Fits(Vector2i cell, ItemDrop.ItemData item)
         {
@@ -298,6 +398,10 @@ namespace OtArmorStand
         {
             for (int slot = 0; slot < _cellOfSlot.Length; slot++)
             {
+                if (!_mirrored[slot])
+                {
+                    continue;
+                }
                 Vector2i cell = _cellOfSlot[slot];
                 if (Inventory.GetItemAt(cell.x, cell.y) == null && Fits(cell, item))
                 {
@@ -344,7 +448,7 @@ namespace OtArmorStand
             bool cleared = false, attached = false;
             for (int slot = 0; slot < _written.Length; slot++)
             {
-                if (_locked[slot])
+                if (_locked[slot] || !_mirrored[slot])
                 {
                     continue;
                 }
@@ -399,7 +503,7 @@ namespace OtArmorStand
             foreach (VisSlot visSlot in ArmorSlots)
             {
                 int slot = Stand.m_slots.FindIndex(s => s.m_slot == visSlot);
-                if (slot < 0 || _locked[slot])
+                if (slot < 0 || _locked[slot] || !_mirrored[slot])
                 {
                     continue;
                 }
