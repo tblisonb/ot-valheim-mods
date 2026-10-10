@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4
+
+- New package icon.
+
 ## 1.0.3
 
 - Documented the exact internal prefab name for every station

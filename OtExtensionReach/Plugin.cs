@@ -19,7 +19,7 @@ namespace OtExtensionReach
     {
         public const string PluginGuid = "tlisonbee.valheim.otextensionreach";
         public const string PluginName = "OtExtensionReach";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.1.0";
 
         internal static ManualLogSource Log;
 

@@ -37,7 +37,7 @@ namespace OtInventoryLayout
     {
         public const string PluginGuid = "tlisonbee.valheim.otinventorylayout";
         public const string PluginName = "OtInventoryLayout";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.1.0";
 
         internal static ManualLogSource Log;
 

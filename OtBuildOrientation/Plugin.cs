@@ -20,7 +20,7 @@ namespace OtBuildOrientation
     {
         public const string PluginGuid = "tlisonbee.valheim.otbuildorientation";
         public const string PluginName = "OtBuildOrientation";
-        public const string PluginVersion = "1.1.0";
+        public const string PluginVersion = "1.1.1";
 
         internal static ManualLogSource Log;
 

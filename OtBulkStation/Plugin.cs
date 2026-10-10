@@ -20,7 +20,7 @@ namespace OtBulkStation
     {
         public const string PluginGuid = "tlisonbee.valheim.otbulkstation";
         public const string PluginName = "OtBulkStation";
-        public const string PluginVersion = "1.0.3";
+        public const string PluginVersion = "1.0.4";
 
         internal static ManualLogSource Log;
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- New package icon.
+
 ## 1.1.0
 
 - Alt + scroll now steps between three ways of lying (upright, on its side,

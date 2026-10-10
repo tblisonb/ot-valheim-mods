@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
+- New package icon.
 - `DisableSpaceRequirement` now defaults to `true`, since packing upgrades
   close together is a core part of what the mod is for. Existing config
   files keep whatever value they already have.
