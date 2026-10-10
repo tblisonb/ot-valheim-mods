@@ -47,13 +47,13 @@ namespace OtArmorStand
             PlaceholderOpacity = Config.Bind(
                 "Placeholders",
                 "Opacity",
-                0.45f,
+                0.5f,
                 "Opacity (0-1) of the black-and-white icon an empty slot shows of what goes there. " +
                 "0 hides them.");
             PlaceholderBrightness = Config.Bind(
                 "Placeholders",
                 "Brightness",
-                0.6f,
+                0.75f,
                 "Brightness (0-1) of the placeholder icons: 1 keeps the icon's own grey levels, lower " +
                 "values darken it toward black.");
 

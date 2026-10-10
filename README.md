@@ -554,7 +554,8 @@ prefabs with UnityPy. The final boss's is set by its last phase
 
 ## OtArmorStand
 
-Not yet confirmed in-game. Use on an armor stand opens vanilla's container
+Confirmed in-game during 1.0.0 development, except the final Swap-label fix
+and multiplayer locking. Use on an armor stand opens vanilla's container
 panel on a 3x3 grid laid out like a body (cape/helmet/weapon,
 shield/chest/belt, legs), and Shift+Use swaps armor with what the player
 wears.

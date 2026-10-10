@@ -42,8 +42,8 @@ Only one player can have a stand open at a time, like a chest.
 |---|---|---|
 | `AltUseSwaps` | `true` | Left Shift + E on a stand swaps armor instead of opening it (the alternate-place key, rebindable in the game's controls). |
 | `ShowSwapButton` | `true` | Show the Swap armor button on an open stand. |
-| `Placeholders.Opacity` | `0.45` | Opacity of the black-and-white icons in empty cells (0 hides them). |
-| `Placeholders.Brightness` | `0.6` | How bright those icons are; lower is darker. |
+| `Placeholders.Opacity` | `0.5` | Opacity of the black-and-white icons in empty cells (0 hides them). |
+| `Placeholders.Brightness` | `0.75` | How bright those icons are; lower is darker. |
 
 ## Multiplayer
 

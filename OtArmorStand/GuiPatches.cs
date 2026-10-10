@@ -17,6 +17,7 @@ namespace OtArmorStand
 
         private static Button _swapButton;
         private static TMP_Text _swapLabel;
+        private const string SwapLabel = "Swap armor";
 
         [HarmonyPostfix]
         [HarmonyPatch("Awake")]
@@ -29,7 +30,7 @@ namespace OtArmorStand
             }
             GameObject go = Object.Instantiate(source.gameObject, source.transform.parent);
             go.name = "OtArmorStand_SwapButton";
-            // Localize would put "Place stacks" back on language or input-layout changes.
+            // A Localize component would put "Place stacks" back on language or input-layout changes.
             foreach (var localize in go.GetComponentsInChildren<Localize>(true))
             {
                 Object.DestroyImmediate(localize);
@@ -59,10 +60,14 @@ namespace OtArmorStand
                 if (_swapButton.gameObject.activeSelf != showSwap)
                 {
                     _swapButton.gameObject.SetActive(showSwap);
-                    if (showSwap && _swapLabel != null)
-                    {
-                        _swapLabel.text = "Swap armor";
-                    }
+                }
+                // The clone is made in Awake, before the GUI is first localized, so Localization
+                // caches its text as "$inventory_stackall" and puts that back whenever it
+                // re-localizes the panel. Drop it from the cache, and keep the label set anyway.
+                if (showSwap && _swapLabel != null && _swapLabel.text != SwapLabel)
+                {
+                    Localization.instance.RemoveTextFromCache(_swapLabel);
+                    _swapLabel.text = SwapLabel;
                 }
             }
         }
