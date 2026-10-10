@@ -10,6 +10,11 @@ namespace OtBuildOrientation
     // Tracks the current resting face and turns it into a rotation. Faces are applied in the
     // piece's own (pre-spin) space, i.e. vanilla's rotation becomes spin * face: "on its left side"
     // means the piece's own left, whichever way vanilla's scroll has spun it to face.
+    //
+    // The six faces pair up by axis - upright/upside down, left/right side, face down/face up -
+    // and for most pieces the second of each pair looks the same as the first (a wall upside down
+    // is still a wall). So scrolling only steps between the three axes, landing on the first face
+    // of each, and the flip key swaps to the other face of the current axis when it matters.
     internal static class Orientation
     {
         private static readonly string[] Names =
@@ -33,6 +38,12 @@ namespace OtBuildOrientation
             Quaternion.Euler(90f, 0f, 0f),
             Quaternion.Euler(-90f, 0f, 0f),
         };
+
+        // Indexed by face: which axis it rests on (0 upright, 1 on its side, 2 flat), and the other
+        // face on that same axis. AxisFaces is what scrolling lands on for each axis.
+        private static readonly int[] AxisOf = { 0, 1, 0, 1, 2, 2 };
+        private static readonly int[] FlipOf = { 2, 3, 0, 1, 5, 4 };
+        private static readonly int[] AxisFaces = { 0, 1, 4 };
 
         private static readonly AccessTools.FieldRef<Player, GameObject> PlacementGhost =
             AccessTools.FieldRefAccess<Player, GameObject>("m_placementGhost");
@@ -94,8 +105,27 @@ namespace OtBuildOrientation
 
         private static void Step(Player player, int direction)
         {
-            _index = (_index + direction + Rotations.Length) % Rotations.Length;
+            int axis = (AxisOf[_index] + direction + AxisFaces.Length) % AxisFaces.Length;
+            _index = AxisFaces[axis];
             player.Message(MessageHud.MessageType.Center, Names[_index]);
+        }
+
+        internal static void UpdateFlip(Player player)
+        {
+            if (Plugin.IsFlipPressed() && CanOrient(player))
+            {
+                _index = FlipOf[_index];
+                // Each face's partner is a 180° roll about the piece's forward axis; adding a 180° spin
+                // on top turns that roll into a tip about its side axis instead (Ry180 * Rz180 = Rx180),
+                // which reverses left/right as the player sees it. Flipping back undoes both.
+                if (Plugin.FlipHorizontally.Value)
+                {
+                    int spins = Mathf.Max(1, Mathf.RoundToInt(360f / PlaceRotationDegrees(player)));
+                    ref int rotation = ref PlaceRotation(player);
+                    rotation = ((rotation + spins / 2) % spins + spins) % spins;
+                }
+                player.Message(MessageHud.MessageType.Center, Names[_index]);
+            }
         }
 
         // Spliced into Player.UpdatePlacementGhost right after it builds its spin-only rotation
@@ -143,6 +173,8 @@ namespace OtBuildOrientation
 
         // SetupPlacementGhost reruns whenever the available piece list refreshes, not only when a
         // different piece is chosen, so the reset keys on the selected prefab actually changing.
+        // With KeepOrientation the face simply carries over; Apply already ignores it for pieces
+        // that can't orient, so it's held through those rather than lost.
         internal static void OnPlacementGhostSetup(Player player)
         {
             var buildPieces = BuildPieces(player);
@@ -151,7 +183,10 @@ namespace OtBuildOrientation
             if (name != _lastSelectedPrefab)
             {
                 _lastSelectedPrefab = name;
-                _index = 0;
+                if (!Plugin.KeepOrientation.Value)
+                {
+                    _index = 0;
+                }
             }
         }
     }
@@ -165,6 +200,38 @@ namespace OtBuildOrientation
             var replacement = AccessTools.Method(typeof(Orientation), nameof(Orientation.FilterScroll));
             return Splice.ReplaceSingleCall(instructions, target, "Player.UpdatePlacement",
                 call => new[] { new CodeInstruction(OpCodes.Call, replacement).MoveLabelsFrom(call) });
+        }
+    }
+
+    // Same input gate vanilla's own build controls sit behind: placement mode, input not taken by
+    // chat/menus, and the build menu closed.
+    [HarmonyPatch(typeof(Player), "UpdatePlacement")]
+    internal static class UpdatePlacementFlipPatch
+    {
+        private static void Prefix(Player __instance, bool takeInput)
+        {
+            if (takeInput && __instance == Player.m_localPlayer && __instance.InPlaceMode() &&
+                !__instance.IsDead() && !Hud.IsPieceSelectionVisible())
+            {
+                Orientation.UpdateFlip(__instance);
+            }
+        }
+    }
+
+    // Vanilla fires the forsaken power on the "GP" button (F) going down, whatever modifiers are
+    // held, so the default flip key (F) would also trigger it. Swallow it on the frame the flip key
+    // goes down while building; outside build mode F is left to vanilla.
+    [HarmonyPatch(typeof(Player), nameof(Player.StartGuardianPower))]
+    internal static class StartGuardianPowerPatch
+    {
+        private static bool Prefix(Player __instance, ref bool __result)
+        {
+            if (__instance == Player.m_localPlayer && __instance.InPlaceMode() && Plugin.IsFlipPressed())
+            {
+                __result = false;
+                return false;
+            }
+            return true;
         }
     }
 

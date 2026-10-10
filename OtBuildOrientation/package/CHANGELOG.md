@@ -1,10 +1,19 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
+- Alt + scroll now steps between three ways of lying (upright, on its side,
+  flat) instead of all six faces. **F** (`FlipKey`, optional
+  `FlipModifierKey`) turns the piece over onto the opposite face (upside
+  down, other side, face up), which most pieces don't need. While a build
+  tool is out, F no longer triggers the forsaken power.
+- `FlipHorizontally` (default `false`): flipping also turns the piece
+  around, so a sloped wall's slope runs the other way.
 - `CopyOrientation` (default `true`): vanilla's piece copy (Left Shift +
   middle mouse) now copies a flipped piece's orientation, not just its
   spin.
+- `KeepOrientation` (default `false`): keep the chosen orientation when
+  selecting a different build piece instead of resetting to upright.
 
 ## 1.0.0
 

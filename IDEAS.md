@@ -5,27 +5,6 @@ Each idea keeps its original wording. **Review notes** under each one
 checked against the decompiled game code (`assembly_valheim.dll`) where
 marked *verified*.
 
-## Existing (changes/additions)
-
-### OtBuildOrientation
-
-- Add a config to the mod which allows the user to enable/disable preserving
-  the previously-used orientation. For example, if you rotate a piece and
-  then switch build pieces, the mod normally resets to the normal upright
-  position. I think this should be the default, but the config, if enabled,
-  would preserve that orientation when switching pieces.
-
-**Review notes**
-
-- Default as written: reset is the default, and the config (off by default)
-  keeps the orientation when switching pieces. That's the reverse of
-  `CopyOrientation`, which defaults on. Fine, just confirm it's intended.
-- Switching to a piece that can't be flipped (`m_canRotate` off, or a terrain
-  tool): suggestion is to keep the stored orientation but not apply it, so it
-  comes back on the next piece that can be flipped. `Orientation.Apply`
-  already skips pieces that can't orient, so this mostly means not resetting
-  `_index` in `OnPlacementGhostSetup` when the config is on.
-
 ## New (named, concrete mod ideas)
 
 ### OtMegaMegingjord

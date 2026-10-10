@@ -395,13 +395,16 @@ for reflowed containers), it's a one-line narrowing, not a rewrite - say so.
 ## OtBuildOrientation
 
 Confirmed working in-game at `1.0.0`, including snapping between flipped
-and regular pieces (stone stairs, grausten pieces).
+and regular pieces (stone stairs, grausten pieces). `1.1.0` (axis + flip,
+`FlipHorizontally`, `CopyOrientation`, `KeepOrientation`) confirmed in-game
+before release.
 
 Vanilla only rotates a build piece around the vertical axis (scroll wheel,
 22.5° steps), so a beam can't lie on its side and stairs can't hang upside
 down. Holding `ModifierKey` (default `LeftAlt`) while scrolling instead
 cycles which face of the piece rests downward: upright, on its left side,
-upside down, on its right side, face down, face up. Together with vanilla's
+upside down, on its right side, face down, face up (as of `1.0.0`; since
+split into three axes plus a flip key, see "Axis + flip" below). Together with vanilla's
 spin, that covers every 90° orientation. A center-screen message names the
 current one, and selecting a different piece resets it to upright.
 
@@ -443,7 +446,7 @@ asset bundles (`valheim_Data/StreamingAssets/SoftRef/Bundles/`) with
 `stone_stair` is 2m x 2m and rises 1m from front (+Z) to back (-Z), with snap
 points along its bottom-front, bottom-back and top-back edges.
 
-**Copy orientation (unreleased, untested):** vanilla already has pick
+**Copy orientation (`1.1.0`):** vanilla already has pick
 block: `Player.CopyPiece`, bound to `AltPlace` (`LeftShift`) + `Remove`
 (middle mouse). It selects the hovered piece in the build menu and copies
 its spin, recovered from the piece's yaw, which is wrong for a flipped
@@ -451,6 +454,28 @@ piece. With `CopyOrientation` on (default), a `CopyPiece` postfix searches
 every spin step x face for the combination closest to the piece's actual
 rotation. `CopyPiece` doesn't return the piece, so a
 `SetSelectedPiece(Piece)` postfix captures it while `CopyPiece` runs.
+
+**Axis + flip (`1.1.0`):** the six faces pair up by axis
+(upright/upside down, left/right side, face down/face up), and for most
+pieces the second of each pair looks like the first. Since no geometry
+check can tell which pairs a player sees as the same (a wooden wall's
+outline is symmetric front to back, but its two faces differ, and snap points
+and bounds can't see textures), the choice is left to the player: Alt+scroll
+steps between the three axes, landing on the first face of each, and
+`FlipKey` (default F, optionally with `FlipModifierKey`) swaps to the other
+face of the current axis. Vanilla fires the forsaken power on
+`GetButtonDown("GP")` (F) regardless of modifiers, so a `StartGuardianPower`
+prefix swallows it on the frame the flip key goes down while in place mode.
+Each face's partner is a 180° roll about the piece's forward axis, which
+keeps a sloped wall's slope direction; `FlipHorizontally` adds a 180° spin
+(`Ry180 * Rz180 = Rx180`, a tip about the side axis), which reverses it.
+True mirroring isn't possible with a rotation.
+
+**Keep orientation (`1.1.0`):** with `KeepOrientation` on
+(default off), `OnPlacementGhostSetup` skips its reset to upright when the
+selected prefab changes. `Orientation.Apply` already ignores the face for
+pieces that can't orient (`m_canRotate` off, `m_groundPiece`), so the face is
+held through those and reapplied on the next piece that can.
 
 The placed rotation is stored on the piece itself, so players without the
 mod should still see flipped pieces correctly. That's expected from how
