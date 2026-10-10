@@ -18,6 +18,16 @@ OtBuildOrientation/
   OtBuildOrientation.csproj
   Plugin.cs                  # config
   OrientationPatches.cs      # Alt+scroll cycles which face of a build piece rests downward
+OtMegingjord/
+  OtMegingjord.csproj
+  Plugin.cs                  # config (per-level price, carry bonus, materials, unlock key)
+  Tiers.cs                   # the seven upgrade items and their shipped defaults
+  Items.cs                   # creates/registers the upgrade items (ObjectDB, ZNetScene)
+  UpgradeRecipe.cs           # the belt's upgrade-only Forge recipe, per-level requirements
+  CarryPatches.cs            # carry bonus and tooltip from the worn belt's quality
+  TraderPatches.cs           # adds the items to Haldor's shop once their boss is dead
+  Recolor.cs                 # placeholder art: tinted copies of vanilla icons/models
+  package/
 OtBulkStation/
   OtBulkStation.csproj
   Plugin.cs                 # config + shared helpers
@@ -480,6 +490,58 @@ held through those and reapplied on the next piece that can.
 The placed rotation is stored on the piece itself, so players without the
 mod should still see flipped pieces correctly. That's expected from how
 vanilla saves pieces but not yet confirmed. Gamepad input isn't handled.
+
+## OtMegingjord
+
+Confirmed in-game at `1.0.0` for Haldor's shop (key gating, prices,
+tooltips) and upgrading to levels 2 and 3; levels 4-8 use the same code
+path with verified material names but haven't been played through. Gives
+Megingjord (`BeltStrength`) eight levels, one per biome; the design,
+numbers and the mythology behind the items are in `IDEAS.md`.
+
+Built-in-code `Trader.TradeItem`s need their string fields set to `""`:
+Unity fills serialized ones that way and `StoreGui.FillList` reads
+`m_tooltip.Length`, so a null there throws mid-list (the row keeps its
+placeholder "12345"/"Tooltip" and later rows are skipped).
+
+Items from mods are dropped from any inventory loaded by a game that
+doesn't have the mod (`Inventory.Load` logs "Failed to find item prefab"
+and skips them), so an unmodded player saving a chest that holds upgrade
+items deletes them. The package README warns about this.
+
+**Items:** each upgrade item is a vanilla item (`Tier.TemplatePrefab`)
+copied under an inactive holder object, so the copy's `Awake` never runs
+but instances spawned from it are active, then renamed, given its own
+`SharedData`, and tinted (`Recolor.cs`; icons go through a
+`RenderTexture` since vanilla's icon atlases aren't CPU-readable). They're
+registered in `ObjectDB` (`m_items`, then the private `UpdateRegisters`)
+for inventories and recipes, and in `ZNetScene` (`m_prefabs` plus the
+private `m_namedPrefabs`) for dropping them into the world.
+
+**Recipe:** vanilla has no recipe for the belt, and a recipe's
+requirements scale by level over one fixed item list
+(`Piece.Requirement.GetAmount`), so they can't change per level. The mod
+adds one upgrade-only recipe (`m_noCraftOnlyUpgrade`) at the Forge listing
+every level's requirements, and patches `GetAmount` so each counts only at
+its own level and is 0 elsewhere, which the requirement UI, inventory
+check and consumption all skip. Their raw `m_amount` stays 0 because
+recipe discovery skips those, so the recipe is known along with the Forge.
+`Recipe.GetRequiredStationLevel` is capped at `MaxForgeLevel` (7).
+
+**Carry weight:** the belt's +150 is a fixed `SE_Stats.m_addMaxCarryWeight`
+on its equip status effect, and equip effects are applied without the
+item's quality. A `ModifyMaxCarryWeight` postfix adds the difference for
+the quality of the belt actually worn (`Humanoid.m_utilityItem`). The
+tooltip reads the same field after `StatusEffect.SetLevel(quality)`, so
+`GetTooltipString` swaps in the value for the quality being shown.
+
+**Haldor:** a `Trader.GetAvailableItems` postfix appends the items to
+Haldor's shop once each `UnlockKey` is set (`defeated_gdking`,
+`defeated_bonemass`, `defeated_dragon`, `defeated_goblinking`,
+`defeated_queen`, `defeated_fader`, `defeated_frozenking_p`). The last
+three aren't in the `GlobalKeys` enum; they were read from the boss
+prefabs with UnityPy. The final boss's is set by its last phase
+(`FrozenKing_p3`) and is also what the Bog Witch's stock checks.
 
 ## Publishing to Hexium
 
