@@ -20,6 +20,7 @@ OtArmorStand/
   StandSession.cs            # mirrors a stand's slots into a temporary Inventory and back
   StandPatches.cs            # Use opens/swaps, slot-type rules for drops and shift-clicks
   GuiPatches.cs              # per-frame sync, Swap button in place of Place stacks
+  CellPatches.cs             # body layout's hidden cells, placeholder icons and slot tooltips
   package/
 OtBuildOrientation/
   OtBuildOrientation.csproj
@@ -554,8 +555,24 @@ prefabs with UnityPy. The final boss's is set by its last phase
 ## OtArmorStand
 
 Not yet confirmed in-game. Use on an armor stand opens vanilla's container
-panel on a 5x2 grid, one cell per slot (armor on top, hands and back
-below), and Shift+Use swaps armor with what the player wears.
+panel on a 3x3 grid laid out like a body (cape/helmet/weapon,
+shield/chest/belt, legs), and Shift+Use swaps armor with what the player
+wears.
+
+**Duplicate slots:** the buildable `ArmorStand` lists its seven slots
+(helmet, chest, legs, cape, belt, back shield, back weapon) twice, 14 in
+all, each pair sharing a switch and `VisSlot`. Vanilla only attaches to the
+first of a pair, so only that one gets a cell. The scan was done with
+UnityPy over the bundles; the 9-slot `ArmorStand_Male`/`_Female` prefabs
+are separate, with hand slots instead.
+
+**Layout:** `InventoryGrid.UpdateGui` only rebuilds its cells when the
+grid's size changes, and the container grid is shared by every chest. A
+postfix hides the cells with no slot and adds a faded placeholder icon
+(a vanilla item's icon) behind the empty ones, and undoes both the first
+time the grid shows any other inventory, before it's drawn - no rebuild
+needed. Chest sorters (Auto Sort Chests sorts this panel too) are undone
+each frame by moving items back to their slot's cell.
 
 **Vanilla's Use:** the helmet, chest, legs, cape and belt slots share one
 hover `Switch` ("block body"), and `ArmorStand.UseItem` with no item

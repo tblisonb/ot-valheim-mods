@@ -21,16 +21,22 @@ namespace OtArmorStand
     // confirmed, and ownership isn't handed away while the panel is open (see RequestOwnPatch).
     internal class StandSession
     {
-        private const int Width = 5;
+        private const int Width = 3;
         private const float OwnershipTimeout = 2f;
 
-        // Cell order for the 5-wide panel: armor across the top row, hands and back below.
-        // Slots not listed here (another mod's stand, say) take the remaining cells in order.
-        private static readonly VisSlot[] CellOrder =
+        // Cells (index = y * Width + x) laid out like a body on a 3x3 grid, with unused cells
+        // hidden by GuiPatches:
+        //   Cape    Helmet  Weapon
+        //   Shield  Chest   Belt
+        //   Shield  Legs    Weapon
+        // Hand/back slots go to the shield column if they can hold a shield, else the weapon one,
+        // spilling into the other column and then extra rows (another mod's stand, say).
+        private static readonly Dictionary<VisSlot, int> ArmorCells = new Dictionary<VisSlot, int>
         {
-            VisSlot.Helmet, VisSlot.Chest, VisSlot.Legs, VisSlot.Shoulder, VisSlot.Utility,
-            VisSlot.HandRight, VisSlot.HandLeft, VisSlot.BackLeft, VisSlot.BackRight,
+            { VisSlot.Shoulder, 0 }, { VisSlot.Helmet, 1 }, { VisSlot.Chest, 4 }, { VisSlot.Utility, 5 }, { VisSlot.Legs, 7 },
         };
+        private static readonly int[] WeaponCells = { 2, 8 };
+        private static readonly int[] ShieldCells = { 3, 6 };
 
         private static readonly VisSlot[] ArmorSlots =
         {
@@ -95,27 +101,51 @@ namespace OtArmorStand
                     primaries.Add(i);
                 }
             }
-            int cellCount = Math.Max(CellOrder.Length, primaries.Count);
-            int height = (cellCount + Width - 1) / Width;
+            var cellOf = new Dictionary<int, int>();
+            var taken = new HashSet<int>();
+            foreach (int slot in primaries)
+            {
+                if (ArmorCells.TryGetValue(stand.m_slots[slot].m_slot, out int cell) && taken.Add(cell))
+                {
+                    cellOf[slot] = cell;
+                }
+            }
+            foreach (int slot in primaries)
+            {
+                if (cellOf.ContainsKey(slot))
+                {
+                    continue;
+                }
+                bool shield = stand.m_slots[slot].m_supportedTypes.Contains(ItemDrop.ItemData.ItemType.Shield);
+                int cell = FirstFree(shield ? ShieldCells : WeaponCells, taken);
+                if (cell < 0)
+                {
+                    cell = FirstFree(shield ? WeaponCells : ShieldCells, taken);
+                }
+                if (cell < 0)
+                {
+                    cell = Width * 3;
+                    while (taken.Contains(cell))
+                    {
+                        cell++;
+                    }
+                }
+                taken.Add(cell);
+                cellOf[slot] = cell;
+            }
+            int height = 3;
+            foreach (int cell in taken)
+            {
+                height = Math.Max(height, cell / Width + 1);
+            }
             _slotAtCell = new int[Width * height];
             for (int i = 0; i < _slotAtCell.Length; i++)
             {
                 _slotAtCell[i] = -1;
             }
-            foreach (int slot in primaries)
+            foreach (var pair in cellOf)
             {
-                int cell = Array.IndexOf(CellOrder, stand.m_slots[slot].m_slot);
-                if (cell >= 0)
-                {
-                    Place(slot, cell);
-                }
-            }
-            foreach (int slot in primaries)
-            {
-                if (!_mirrored[slot])
-                {
-                    Place(slot, Array.IndexOf(_slotAtCell, -1));
-                }
+                Place(pair.Key, pair.Value);
             }
 
             // m_bkg is only decoration, and InventoryGui never reads it for containers.
@@ -153,6 +183,29 @@ namespace OtArmorStand
             _slotAtCell[cell] = slot;
             _cellOfSlot[slot] = new Vector2i(cell % Width, cell / Width);
             _mirrored[slot] = true;
+        }
+
+        private static int FirstFree(int[] cells, HashSet<int> taken)
+        {
+            foreach (int cell in cells)
+            {
+                if (!taken.Contains(cell))
+                {
+                    return cell;
+                }
+            }
+            return -1;
+        }
+
+        // The stand slot shown in a cell, or null for a hidden one.
+        internal ArmorStand.ArmorStandSlot SlotAt(Vector2i cell)
+        {
+            int index = cell.y * Width + cell.x;
+            if (cell.x < 0 || cell.y < 0 || cell.x >= Width || index >= _slotAtCell.Length || _slotAtCell[index] < 0)
+            {
+                return null;
+            }
+            return Stand.m_slots[_slotAtCell[index]];
         }
 
         private int PrimaryOf(int slot)

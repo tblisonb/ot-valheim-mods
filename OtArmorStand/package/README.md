@@ -8,12 +8,16 @@ chest instead.
 ## Usage
 
 Press **Use** (E) on an armor stand to open it. It shows up as a small
-chest with one cell per slot:
+chest with one cell per slot, laid out like the body:
 
-| | | | | |
-|---|---|---|---|---|
-| Helmet | Chest | Legs | Cape | Belt |
-| Right hand | Left hand | Back (weapon) | Back (shield) | |
+```
+ Cape    Helmet  Weapon
+ Shield  Chest   Belt
+         Legs
+```
+
+Empty cells show a faded icon of what goes there, and hovering one names
+the slot.
 
 - **Drag** gear in or out like any chest. Dropping a piece on the wrong
   cell puts it in the right one, and shift-clicking it from your inventory
