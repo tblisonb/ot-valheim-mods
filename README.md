@@ -501,7 +501,7 @@ The placed rotation is stored on the piece itself, so players without the
 mod should still see flipped pieces correctly. That's expected from how
 vanilla saves pieces but not yet confirmed. Gamepad input isn't handled.
 
-**Rotating built pieces (`1.2.0`, untested in-game):** with a build tool
+**Rotating built pieces (`1.2.0`):** confirmed in-game in single player before release (turning floors and walls, persistence across relog, support recalculation, ward refusal, no camera zoom); not yet tested with a second modded player. with a build tool
 out, holding `RotatePieceKey` (default `LeftShift`) over a built piece and
 scrolling turns it in place, `RotatePieceStep` (default 90°) per notch.
 Shift is free here: vanilla's `AltPlace` only affects snapping the ghost,
@@ -542,7 +542,7 @@ the owners of every piece overlapping it before and after the move (what
 is needed in between, or overlap queries still see the old collider
 positions. Overlap with neighboring pieces isn't checked.
 
-**Server check (`1.2.0`, untested):** installed on a dedicated server with
+**Server check (`1.2.0`, untested in multiplayer):** installed on a dedicated server with
 `RequireOnClients` on (default), the mod turns away clients that don't
 have it. Each modded client sends an `OtBuildOrientation_Hello` RPC with a
 protocol number from `ZNet.OnNewConnection`, right after vanilla's
