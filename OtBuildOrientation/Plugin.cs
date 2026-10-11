@@ -14,13 +14,14 @@ namespace OtBuildOrientation
     // folded into the same rotation vanilla builds the placement ghost from, so snapping, manual
     // snap-point cycling and the placed piece itself all pick it up without any changes of their
     // own. Vanilla's piece copy (LeftShift + remove) is taught to copy the orientation too (see
-    // CopyPatches.cs).
+    // CopyPatches.cs). Separately, an already-built piece can be turned in place (RotatePatches.cs),
+    // and a dedicated server can require the mod on every client (ServerCheck.cs).
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     public class Plugin : BaseUnityPlugin
     {
         public const string PluginGuid = "tlisonbee.valheim.otbuildorientation";
         public const string PluginName = "OtBuildOrientation";
-        public const string PluginVersion = "1.1.1";
+        public const string PluginVersion = "1.2.0";
 
         internal static ManualLogSource Log;
 
@@ -30,6 +31,9 @@ namespace OtBuildOrientation
         internal static ConfigEntry<bool> FlipHorizontally;
         internal static ConfigEntry<bool> CopyOrientation;
         internal static ConfigEntry<bool> KeepOrientation;
+        internal static ConfigEntry<KeyCode> RotatePieceKey;
+        internal static ConfigEntry<float> RotatePieceStep;
+        internal static ConfigEntry<bool> RequireOnClients;
 
         private Harmony _harmony;
 
@@ -87,6 +91,30 @@ namespace OtBuildOrientation
                 "resetting to upright. Pieces that can't be oriented are placed as usual, and the " +
                 "orientation comes back on the next one that can.");
 
+            RotatePieceKey = Config.Bind(
+                "Built pieces",
+                "RotatePieceKey",
+                KeyCode.LeftShift,
+                "With a build tool out, look at a built piece, hold this and scroll to turn it in " +
+                "place around its center. None turns the feature off.");
+
+            RotatePieceStep = Config.Bind(
+                "Built pieces",
+                "RotatePieceStep",
+                90f,
+                new ConfigDescription(
+                    "Degrees a built piece turns per scroll notch. 90 keeps square pieces on the build " +
+                    "grid; 0 uses vanilla's placement step (22.5).",
+                    new AcceptableValueList<float>(0f, 22.5f, 45f, 90f, 180f)));
+
+            RequireOnClients = Config.Bind(
+                "Server",
+                "RequireOnClients",
+                true,
+                "Only used when this mod is installed on a dedicated server: turn away players who " +
+                "don't have it, since they wouldn't see built pieces turn until they reload the area. " +
+                "Has no effect on clients or on worlds hosted from the game.");
+
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll();
 
@@ -99,6 +127,9 @@ namespace OtBuildOrientation
         }
 
         internal static bool IsModifierHeld() => ZInput.GetKey(ModifierKey.Value, false);
+
+        internal static bool IsRotatePieceHeld() =>
+            RotatePieceKey.Value != KeyCode.None && ZInput.GetKey(RotatePieceKey.Value, false);
 
         internal static bool IsFlipPressed() =>
             ZInput.GetKeyDown(FlipKey.Value, false) &&

@@ -54,6 +54,33 @@ default), and it becomes your selected build piece. Vanilla only copies the
 piece's spin, though. With this mod, a flipped piece is copied in the same
 orientation it was built with.
 
+## Turning a built piece
+
+With the hammer out, look at a piece you've already built, hold
+**Left Shift** and scroll to turn it in place, 90° per notch by default. It
+turns around its own center, so a floor stays on the same square and a wall
+flips to face the other way in the same spot. The rules are the same as
+for removing a piece: you need access to any ward there and a workbench in
+range. Ships and carts can't be turned.
+
+Pieces resting on or holding up the turned piece work out their support
+again, so turning a piece can make something above it fall, the same as
+removing it would.
+
+The piece itself isn't checked for overlap with its neighbors, so it can
+end up clipping into them.
+
+### Multiplayer
+
+The new rotation is saved with the piece, but players see it right away
+only if they also have this mod; without it they see the change after
+leaving the area and coming back. To make sure everyone has it, install the
+mod on your dedicated server too: with `RequireOnClients` on (the default),
+the server turns away players who don't have it, and they get an
+"incompatible version" message. Installing it on the server is optional;
+without it, everything else works the same. Worlds hosted from the game
+itself never turn anyone away.
+
 ## Configuration
 
 `BepInEx/config/tlisonbee.valheim.otbuildorientation.cfg`, editable directly
@@ -76,6 +103,14 @@ or via a mod config manager (e.g. BepInEx Configuration Manager):
   when you select a different piece, instead of resetting to upright.
   Pieces that can't be oriented are placed normally, and the orientation
   comes back on the next piece that can.
+- **`RotatePieceKey`** (default `LeftShift`) - hold while scrolling over a
+  built piece to turn it. `None` turns this off.
+- **`RotatePieceStep`** (default `90`) - degrees per scroll notch: `22.5`,
+  `45`, `90` or `180`, or `0` for vanilla's placement step. 90 keeps square
+  pieces on the grid.
+- **`RequireOnClients`** (default `true`) - on a dedicated server, turn
+  away players who don't have the mod. Does nothing on clients or on worlds
+  hosted from the game.
 
 ## Source
 

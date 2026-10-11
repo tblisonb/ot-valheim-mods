@@ -66,6 +66,7 @@ libs/                        # reference-only DLLs (not redistributed, see below
   UnityEngine.CoreModule.dll
   UnityEngine.UI.dll          # ScrollRect, Mask, Image, etc.
   Unity.TextMeshPro.dll       # TMP_Text, for relabeling cloned buttons
+  UnityEngine.PhysicsModule.dll # Collider, Physics, Rigidbody
 ```
 
 `libs/` only holds *reference assemblies* used at compile time (`<Private>false</Private>`
@@ -499,6 +500,57 @@ held through those and reapplied on the next piece that can.
 The placed rotation is stored on the piece itself, so players without the
 mod should still see flipped pieces correctly. That's expected from how
 vanilla saves pieces but not yet confirmed. Gamepad input isn't handled.
+
+**Rotating built pieces (`1.2.0`, untested in-game):** with a build tool
+out, holding `RotatePieceKey` (default `LeftShift`) over a built piece and
+scrolling turns it in place, `RotatePieceStep` (default 90°) per notch.
+Shift is free here: vanilla's `AltPlace` only affects snapping the ghost,
+and Shift+scroll does nothing in vanilla. The scroll is read in the
+`UpdatePlacement` prefix rather than at the spliced call, because vanilla
+only reaches that call when the selected piece can rotate and its ghost is
+visible; `FilterScroll` still hands vanilla 0 so the ghost doesn't spin too.
+
+Vanilla never moves a built piece: `ZNetScene.CreateObject` reads the
+rotation from the ZDO once, and pieces have no `ZSyncTransform`, so later
+ZDO changes don't reach an object that's already loaded. So the mod claims
+ownership (only the owner's `SetPosition`/`SetRotation` bump the ZDO
+revision), writes the new position and rotation to the ZDO (persistent, and
+correct for anyone who loads the area afterwards), moves its own copy, and
+sends a global routed RPC with the ZDOID, position and rotation that other
+modded clients apply to their loaded copy. A vanilla server forwards
+routed RPCs it has no handler for, so no server install is needed. Vanilla
+clients see the change only after reloading the area.
+
+The turn is about the vertical axis through the horizontal center of the
+piece's solid colliders (union of `Collider.bounds`), not its pivot, which
+is often at an edge. Permission checks copy `Player.RemovePiece`:
+`m_canBeRemoved`, no-build locations, ward access, and
+`CheckCanRemovePiece` (workbench in range), plus `m_canRotate` and not a
+ground piece; anything with a `ZSyncTransform` or non-kinematic
+`Rigidbody` (ships, carts) is refused.
+
+`WearNTear` caches its support boxes in world space (`SetupColliders`) and
+which neighbors supported it, checked by those colliders' positions. After
+moving, every client re-runs `SetupColliders` and clears the piece's own
+cache, and the rotating client sends vanilla's `RPC_ClearCachedSupport` to
+the owners of every piece overlapping it before and after the move (what
+`UpdateSupport` does for a newly placed piece). `Physics.SyncTransforms()`
+is needed in between, or overlap queries still see the old collider
+positions. Overlap with neighboring pieces isn't checked.
+
+**Server check (`1.2.0`, untested):** installed on a dedicated server with
+`RequireOnClients` on (default), the mod turns away clients that don't
+have it. Each modded client sends an `OtBuildOrientation_Hello` RPC with a
+protocol number from `ZNet.OnNewConnection`, right after vanilla's
+`ServerHandshake`; the client's `PeerInfo` only comes after the server
+answers that handshake, so on the same ordered connection the hello always
+arrives first. A prefix on `ZNet.RPC_PeerInfo` rejects peers that didn't
+send one, the same way vanilla rejects a wrong game version (`Error` RPC
+with `ConnectionStatus.ErrorVersion`, so the client shows "incompatible
+version"; there's no channel for a custom reason). A vanilla server
+ignores the unknown hello, as `ZRpc` does any unregistered method. Worlds
+hosted from the game client never enforce it, so installing the mod as a
+player doesn't lock out friends who don't have it.
 
 ## OtMegingjord
 

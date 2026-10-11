@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+- Turn an already-built piece in place: with a build tool out, look at it,
+  hold Left Shift (`RotatePieceKey`) and scroll. It turns around its own
+  center, 90° per notch by default (`RotatePieceStep`). Ward, no-build zone
+  and workbench rules are the same as for removing the piece.
+- Other players need the mod to see the piece turn right away; without it
+  they see the change after reloading the area.
+- Optional server install: a dedicated server with the mod turns away
+  players who don't have it (`RequireOnClients`, on by default).
+
 ## 1.1.1
 
 - New package icon.

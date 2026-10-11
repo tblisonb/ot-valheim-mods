@@ -76,13 +76,19 @@ namespace OtBuildOrientation
         }
 
         // Spliced into Player.UpdatePlacement in place of its one ZInput.GetMouseScrollWheel() call,
-        // which vanilla only reaches for a rotatable ghost. With the modifier held, the scroll is
+        // which vanilla only reaches for a rotatable ghost. Turning a built piece (RotatePatches.cs)
+        // gets first claim on the scroll. Otherwise, with the modifier held, the scroll is
         // consumed here (vanilla sees 0 and doesn't spin) and steps the resting face instead, using
         // vanilla's own scroll threshold so one notch feels the same as one spin step.
         internal static float FilterScroll()
         {
             float scroll = ZInput.GetMouseScrollWheel();
             var player = Player.m_localPlayer;
+            if (player != null && BuiltRotation.OwnsScroll(player))
+            {
+                _scrollAccumulated = 0f;
+                return 0f;
+            }
             if (player == null || !Plugin.IsModifierHeld() || !CanOrient(player))
             {
                 _scrollAccumulated = 0f;
@@ -204,7 +210,9 @@ namespace OtBuildOrientation
     }
 
     // Same input gate vanilla's own build controls sit behind: placement mode, input not taken by
-    // chat/menus, and the build menu closed.
+    // chat/menus, and the build menu closed. Turning a built piece reads the scroll here rather than
+    // at the spliced call, which vanilla skips when the selected piece can't rotate or its ghost is
+    // hidden - neither of which matters for the piece being looked at.
     [HarmonyPatch(typeof(Player), "UpdatePlacement")]
     internal static class UpdatePlacementFlipPatch
     {
@@ -214,6 +222,7 @@ namespace OtBuildOrientation
                 !__instance.IsDead() && !Hud.IsPieceSelectionVisible())
             {
                 Orientation.UpdateFlip(__instance);
+                BuiltRotation.Update(__instance);
             }
         }
     }
