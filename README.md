@@ -509,6 +509,10 @@ and Shift+scroll does nothing in vanilla. The scroll is read in the
 `UpdatePlacement` prefix rather than at the spliced call, because vanilla
 only reaches that call when the selected piece can rotate and its ghost is
 visible; `FilterScroll` still hands vanilla 0 so the ghost doesn't spin too.
+`GameCamera.UpdateCamera` zooms with the wheel in build mode whenever the
+ghost isn't using it (selected piece can't rotate, or no ray hits), so a
+transpiler swaps its `GetMouseScrollWheel()` reads for one that returns 0
+while a built piece owns the scroll; plain scroll zooms as before.
 
 Vanilla never moves a built piece: `ZNetScene.CreateObject` reads the
 rotation from the ZDO once, and pieces have no `ZSyncTransform`, so later

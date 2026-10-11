@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection.Emit;
 using HarmonyLib;
 using UnityEngine;
 
@@ -44,6 +45,13 @@ namespace OtBuildOrientation
         // hands vanilla 0 so it doesn't spin the placement ghost too.
         internal static bool OwnsScroll(Player player) =>
             Plugin.IsRotatePieceHeld() && player.GetHoveringPiece() != null;
+
+        // Stands in for ZInput.GetMouseScrollWheel() in GameCamera.UpdateCamera.
+        internal static float CameraScroll()
+        {
+            Player player = Player.m_localPlayer;
+            return player != null && OwnsScroll(player) ? 0f : ZInput.GetMouseScrollWheel();
+        }
 
         internal static void Update(Player player)
         {
@@ -227,6 +235,38 @@ namespace OtBuildOrientation
                         view.InvokeRPC(view.GetZDO().GetOwner(), "RPC_ClearCachedSupport");
                     }
                 }
+            }
+        }
+    }
+
+    // In build mode vanilla zooms the camera with the scroll wheel whenever it isn't spinning the
+    // ghost: the selected piece can't rotate, or the crosshair hits nothing to place against. Either
+    // can be true while turning a built piece, so the camera's scroll reads 0 while that owns it.
+    // UpdateCamera reads the wheel twice (free-fly debug camera and the zoom); both are swapped,
+    // which is harmless for free-fly since it's never in build mode.
+    [HarmonyPatch(typeof(GameCamera), "UpdateCamera")]
+    internal static class CameraZoomPatch
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var target = AccessTools.Method(typeof(ZInput), nameof(ZInput.GetMouseScrollWheel));
+            var replacement = AccessTools.Method(typeof(BuiltRotation), nameof(BuiltRotation.CameraScroll));
+            int count = 0;
+            foreach (var code in instructions)
+            {
+                if (code.Calls(target))
+                {
+                    count++;
+                    yield return new CodeInstruction(OpCodes.Call, replacement).MoveLabelsFrom(code);
+                }
+                else
+                {
+                    yield return code;
+                }
+            }
+            if (count == 0)
+            {
+                Plugin.Log.LogWarning("No scroll-wheel read found in GameCamera.UpdateCamera; turning a built piece may also zoom the camera.");
             }
         }
     }
