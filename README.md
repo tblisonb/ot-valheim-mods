@@ -367,7 +367,7 @@ whole rows that fit between its top edge and the bottom of the screen
 (measured on the root canvas, so it follows resolution and UI scale), and
 anything past that scrolls the vanilla way. The scrollbar track, previously
 only repositioned, now also grows with the panel so it spans the taller
-viewport. Untested in-game until confirmed.
+viewport. Confirmed in-game at `1.1.1`.
 
 A `LogContainerUiHierarchy` debug config (off by default) dumps the full
 RectTransform/component tree under the container panel to the log every
