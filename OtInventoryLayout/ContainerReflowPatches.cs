@@ -79,7 +79,7 @@ namespace OtInventoryLayout
 
             var elements = (List<InventoryElement>)ElementsField.GetValue(__instance);
             RepositionElements(__instance, elements, displayWidth, displayHeight);
-            ResizePanel(gui, displayWidth, displayHeight, __instance.m_elementSpace);
+            ResizePanel(gui, __instance, displayWidth, displayHeight);
         }
 
         private static void RepositionElements(InventoryGrid grid, List<InventoryElement> elements, int displayWidth, int displayHeight)
@@ -106,8 +106,9 @@ namespace OtInventoryLayout
                    && Vector2.Distance(rt.anchorMax, new Vector2(0.5f, 0.5f)) < 0.01f;
         }
 
-        private static void ResizePanel(InventoryGui gui, int displayWidth, int displayHeight, float elementSpace)
+        private static void ResizePanel(InventoryGui gui, InventoryGrid grid, int displayWidth, int displayHeight)
         {
+            var elementSpace = grid.m_elementSpace;
             var panel = gui.m_container;
             if (panel == null)
             {
@@ -134,7 +135,13 @@ namespace OtInventoryLayout
             var heightPadding = _baselineContainerHeight - VanillaFitRows * elementSpace;
 
             var targetContainerWidth = Mathf.Max(_baselineContainerWidth, displayWidth * elementSpace + widthPadding);
-            var targetContainerHeight = Mathf.Max(_baselineContainerHeight, displayHeight * elementSpace + heightPadding);
+            // The panel only grows as far as the screen allows. Past that the grid scrolls the
+            // way vanilla's does at its native 4 rows (the grid is the scroll viewport and stretches
+            // with the panel; m_gridRoot is already sized to every row above). Without this cap a
+            // big enough container - a tombstone from a player with an expanded inventory - ran off
+            // the bottom of the screen with no way to reach its last rows.
+            var visibleRows = Mathf.Min(displayHeight, Mathf.Max((int)VanillaFitRows, RowsThatFit(panel, heightPadding, elementSpace)));
+            var targetContainerHeight = Mathf.Max(_baselineContainerHeight, visibleRows * elementSpace + heightPadding);
             var widthDelta = targetContainerWidth - _baselineContainerWidth;
             var heightDelta = targetContainerHeight - _baselineContainerHeight;
 
@@ -169,10 +176,46 @@ namespace OtInventoryLayout
                 {
                     child.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, baseline.size.x + widthDelta);
                     child.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, baseline.size.y + heightDelta);
+                    child.anchoredPosition = baseline.pos + correction;
                 }
-
-                child.anchoredPosition = baseline.pos + correction;
+                else if (grid.m_scrollbar != null && grid.m_scrollbar.transform.IsChildOf(child))
+                {
+                    // The scrollbar track runs the height of the viewport, so it grows with it now
+                    // that a grown panel can still need scrolling. Its top edge is held where it was:
+                    // growing by heightDelta moves the top up by heightDelta * (1 - pivot), on top of
+                    // the center drift the correction above cancels.
+                    child.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, baseline.size.y + heightDelta);
+                    child.anchoredPosition = baseline.pos + correction - new Vector2(0f, heightDelta * (1f - child.pivot.y));
+                }
+                else
+                {
+                    child.anchoredPosition = baseline.pos + correction;
+                }
             }
+        }
+
+        // Whole rows of slots that fit between the panel's top edge (which stays put as it grows,
+        // pivot (0,1)) and the bottom of the screen, less half a slot of margin. Measured on the
+        // root canvas so it follows resolution and UI scale; the panel's own lossy scale converts
+        // screen distance back into the panel's units.
+        private static readonly Vector3[] Corners = new Vector3[4];
+
+        private static int RowsThatFit(RectTransform panel, float heightPadding, float elementSpace)
+        {
+            var canvas = panel.GetComponentInParent<Canvas>();
+            var scale = panel.lossyScale.y;
+            if (canvas == null || scale <= 0f || elementSpace <= 0f)
+            {
+                return int.MaxValue;
+            }
+
+            panel.GetWorldCorners(Corners);
+            var panelTop = Corners[1].y;
+            ((RectTransform)canvas.rootCanvas.transform).GetWorldCorners(Corners);
+            var screenBottom = Corners[0].y;
+
+            var available = (panelTop - screenBottom) / scale - heightPadding - elementSpace / 2f;
+            return Mathf.FloorToInt(available / elementSpace);
         }
     }
 }

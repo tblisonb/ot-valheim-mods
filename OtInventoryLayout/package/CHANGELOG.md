@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1
+
+- A container with more rows than fit on screen (e.g. the tombstone of a
+  player with an expanded inventory) no longer runs off the bottom of the
+  screen. The panel now grows only as far as the screen allows, and the rest
+  scrolls with a scrollbar, the same way vanilla handles large containers.
+
 ## 1.1.0
 
 - New package icon.

@@ -14,6 +14,10 @@ on-screen position of each slot changes; the container's actual width/height,
 save data, and item positions are completely untouched, and every click/drag
 interaction keeps working normally.
 
+The panel grows to show a container's extra rows only as far as your screen
+allows. Anything past that, like the tombstone of a player with an expanded
+inventory, scrolls with a scrollbar the way vanilla does.
+
 ## Configuration
 
 Both settings live in

@@ -67,6 +67,7 @@ libs/                        # reference-only DLLs (not redistributed, see below
   UnityEngine.UI.dll          # ScrollRect, Mask, Image, etc.
   Unity.TextMeshPro.dll       # TMP_Text, for relabeling cloned buttons
   UnityEngine.PhysicsModule.dll # Collider, Physics, Rigidbody
+  UnityEngine.UIModule.dll    # Canvas
 ```
 
 `libs/` only holds *reference assemblies* used at compile time (`<Private>false</Private>`
@@ -350,7 +351,23 @@ scoping decision to leave it out for now. A configured column/row count
 large enough to run the panel off the edge of the screen (or into the
 player's own inventory panel) isn't clamped or warned about - this mod
 trusts the configured value the same way `OtBulkStation`'s capacity
-overrides do.
+overrides do. (Height is capped as of `1.1.1`, see below; width still
+isn't.)
+
+**Screen-height cap (`1.1.1`, GitHub issue #1).** The panel grows for
+*every* container with more than 4 rows, not just configured ones, which
+quietly undid vanilla's own handling of tall containers: vanilla keeps the
+panel at 4 rows and scrolls the grid (`InventoryGrid` is the scroll
+viewport, `m_gridRoot` the content, with `m_scrollbar` alongside), but a
+panel grown to fit every row leaves nothing to scroll. A tombstone copies
+its owner's inventory dimensions (`Inventory.MoveInventoryToGrave`), so with
+an inventory-expansion mod it can have far more rows than fit, and the
+bottom ones were cut off with no scrollbar. Now the panel only grows by the
+whole rows that fit between its top edge and the bottom of the screen
+(measured on the root canvas, so it follows resolution and UI scale), and
+anything past that scrolls the vanilla way. The scrollbar track, previously
+only repositioned, now also grows with the panel so it spans the taller
+viewport. Untested in-game until confirmed.
 
 A `LogContainerUiHierarchy` debug config (off by default) dumps the full
 RectTransform/component tree under the container panel to the log every
